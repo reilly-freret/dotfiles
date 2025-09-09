@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# extensions.sh hash: {{ joinPath .chezmoi.sourceDir "cursor" "extensions.txt" | sha256sum }}
+
+while IFS= read -r extension || [[ -n "$extension" ]]; do
+  # Skip empty lines and comments
+  if [[ -z "$extension" || "$extension" =~ ^# ]]; then
+    continue
+  fi
+  cursor --install-extension "$extension"
+done < {{ joinPath .chezmoi.sourceDir "cursor" "extensions.txt" }}
+
