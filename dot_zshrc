@@ -11,6 +11,9 @@ alias pi='ssh freret@192.168.8.235'
 alias c='cursor'
 alias gfp='git fetch -p'
 alias gitrb='git removed-branches'
+alias gitrbpf='git removed-branches --prune --force'
+alias gcm='git commit --verbose -m'
+alias gs='git status'
 
 function rfind {
   if [[ -z "$1" ]]; then
@@ -91,4 +94,7 @@ if type compdef &>/dev/null; then
   fi
 fi
 ###-end-pnpm-completion-###
+
+# mise
+eval "$(mise activate zsh)"
 
