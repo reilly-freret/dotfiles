@@ -1,0 +1,57 @@
+{
+    "window.commandCenter": true,
+    "workbench.colorTheme": "Default High Contrast",
+    "vim.vimrc.enable": true,
+    "[jsonc]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "vim.handleKeys": {
+    },
+    "diffEditor.renderSideBySide": true,
+    "editor.inlayHints.enabled": "offUnlessPressed",
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "biomejs.biome"
+    },
+    "[markdown]": {
+        "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+    },
+    "[tailwindcss]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "biomejs.biome"
+    },
+    "javascript.preferences.importModuleSpecifier": "non-relative",
+    "emmet.showExpandedAbbreviation": "never",
+    "editor.fontFamily": "'Fira Code'",
+    "editor.fontLigatures": true,
+    "terminal.integrated.fontFamily": "monospace",
+    "editor.cursorSmoothCaretAnimation": "on",
+    "security.promptForLocalFileProtocolHandling": false,
+    "biome.configurationPath": "biome.jsonc",
+    "workbench.editorAssociations": {
+        "*.svg": "default"
+    },
+    "todo-tree.highlights.useColourScheme": true,
+    "todo-tree.highlights.backgroundColourScheme": [
+        "red",
+        "orange",
+        "yellow",
+        "orange",
+        "blue",
+        "indigo",
+        "violet"
+    ],
+    "todo-tree.highlights.foregroundColourScheme": [
+        "white",
+        "black",
+        "black",
+        "black",
+        "white",
+        "white",
+        "black"
+    ],
+}
