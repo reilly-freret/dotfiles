@@ -54,4 +54,6 @@
         "white",
         "black"
     ],
+    "terminal.integrated.showExitAlert": false,
+    "terminal.integrated.shellIntegration.decorationsEnabled": "never",
 }
