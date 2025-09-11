@@ -15,6 +15,9 @@ alias gitrbpf='git removed-branches --prune --force'
 alias gcm='git commit --verbose -m'
 alias gs='git status'
 
+bindkey '^u' backward-kill-line
+bindkey '^k' kill-line
+
 function rfind {
   if [[ -z "$1" ]]; then
     echo "no arguments passed; aborting"
