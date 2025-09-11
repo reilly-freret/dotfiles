@@ -2,7 +2,7 @@ ZSH_THEME="agnoster" # set by `omz`
 export DEFAULT_USER="reillyfreret"
 export ZSH="$HOME/.oh-my-zsh"
 COMPLETION_WAITING_DOTS="true"
-plugins=(git python)
+plugins=(git python chezmoi)
 source $ZSH/oh-my-zsh.sh
 
 alias tree="tree -L 2 -a"
