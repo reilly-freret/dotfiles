@@ -14,6 +14,7 @@ alias gitrb='git removed-branches'
 alias gitrbpf='git removed-branches --prune --force'
 alias gcm='git commit --verbose -m'
 alias gs='git status'
+alias ghprcw='gh pr checks --watch'
 
 bindkey '^u' backward-kill-line
 bindkey '^k' kill-line
@@ -97,6 +98,10 @@ if type compdef &>/dev/null; then
   fi
 fi
 ###-end-pnpm-completion-###
+
+utcnow() {
+  date -u +"%Y-%m-%dT%H:%M:%S"
+}
 
 # mise
 eval "$(mise activate zsh)"
