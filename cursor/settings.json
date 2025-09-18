@@ -56,4 +56,7 @@
     ],
     "terminal.integrated.showExitAlert": false,
     "terminal.integrated.shellIntegration.decorationsEnabled": "never",
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
 }
