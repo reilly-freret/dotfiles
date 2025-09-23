@@ -59,4 +59,5 @@
     "[javascript]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
+    "typescript.preferences.importModuleSpecifier": "non-relative",
 }

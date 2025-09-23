@@ -58,16 +58,17 @@ function wco() {
     return 1
   fi
 
-  # Extract the ticket prefix (e.g., WITH-3391)
-  if [[ $branch =~ (WITH-[0-9]+) ]]; then
-    ticket="${match[1]}"
+  # Extract the ticket prefix (e.g., WITH-3391 or PROD-42)
+  if [[ $branch =~ (WITH-[0-9]+|PROD-[0-9]+) ]]; then
+    ticket="${BASH_REMATCH[1]}"
     git commit -m "[$ticket] RF - $1"
   else
-    echo "Branch name does not contain a valid ticket (e.g., WITH-1234)."
+    echo "Branch name does not contain a valid ticket (e.g., WITH-1234 or PROD-5678)."
     echo "Committing without ticket prefix..."
     git commit -m "RF - $1"
   fi
 }
+
 
 if command -v ngrok &>/dev/null; then
   eval "$(ngrok completion)"
