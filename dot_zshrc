@@ -59,7 +59,7 @@ function wco() {
   fi
 
   # Extract the ticket prefix (e.g., WITH-3391 or PROD-42)
-  if [[ $branch =~ (WITH-[0-9]+|PROD-[0-9]+) ]]; then
+  if [[ $branch =~ ^((WITH|PROD)-[0-9]+) ]]; then
     ticket="${BASH_REMATCH[1]}"
     git commit -m "[$ticket] RF - $1"
   else
