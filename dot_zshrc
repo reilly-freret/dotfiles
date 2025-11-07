@@ -107,3 +107,5 @@ utcnow() {
 # mise
 eval "$(mise activate zsh)"
 
+# esp idf
+alias getidf=". ~/esp/esp-idf/export.sh"
