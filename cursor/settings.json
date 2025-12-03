@@ -74,6 +74,8 @@
     "[github-actions-workflow]": {
         "editor.defaultFormatter": "redhat.vscode-yaml"
     },
-    "editor.tabSize": 2,
     "typescript.updateImportsOnFileMove.enabled": "always",
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
 }
