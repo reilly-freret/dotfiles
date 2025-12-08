@@ -74,7 +74,6 @@
     "[github-actions-workflow]": {
         "editor.defaultFormatter": "redhat.vscode-yaml"
     },
-    "editor.tabSize": 2,
     "typescript.updateImportsOnFileMove.enabled": "always",
     "[yaml]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -82,4 +81,7 @@
     "[html]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    }
 }
