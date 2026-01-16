@@ -25,5 +25,20 @@
     "key": "cmd+[",
     "command": "workbench.action.terminal.focusPreviousPane",
     "when": "(terminalHasBeenCreated || terminalProcessSupported) && !editorFocus"
+  },
+  {
+    "key": "ctrl+shift+d",
+    "command": "editor.action.revealDefinition",
+    "when": "editorHasDefinitionProvider"
+  },
+  {
+    "key": "ctrl+cmd+r",
+    "command": "editor.action.rename",
+    "when": "editorHasRenameProvider && editorTextFocus && !editorReadonly"
+  },
+  {
+    "key": "f2",
+    "command": "-editor.action.rename",
+    "when": "editorHasRenameProvider && editorTextFocus && !editorReadonly"
   }
 ]

@@ -44,6 +44,11 @@ if [ -f '/Users/reillyfreret/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . 
 # The next line enables shell command completion for gcloud.
 if [ -f '/Users/reillyfreret/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/reillyfreret/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
 
+# list most recent files in pwd
+function lr() {
+  local n="${1:-5}"
+  ls -lt | grep -v '^total' | head -n "$n"
+}
 
 # git commit in the withco format
 function wco() {
@@ -106,5 +111,6 @@ eval "$(mise activate zsh)"
 
 # esp idf
 alias getidf=". ~/esp/esp-idf/export.sh"
+
 
 eval $(thefuck --alias)
