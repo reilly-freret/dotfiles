@@ -28,14 +28,6 @@ function rfind {
   mdfind "kMDItemFSName=='*$1*'cd"
 }
 
-# pnpm
-export PNPM_HOME="/Users/reillyfreret/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end
-
 autoload -Uz compinit && compinit
 
 # The next line updates PATH for the Google Cloud SDK.
