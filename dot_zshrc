@@ -16,6 +16,7 @@ alias gcm='git commit --verbose -m'
 alias gs='git status'
 alias ghprcw='gh pr checks --watch'
 alias ghmerge='gh pr merge -sd'
+alias ncduc='ncdu --color dark'
 
 bindkey '^u' backward-kill-line
 bindkey '^k' kill-line
