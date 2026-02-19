@@ -8,6 +8,7 @@ source $ZSH/oh-my-zsh.sh
 alias tree="tree -L 2 -a"
 
 alias pi='ssh freret@192.168.8.235'
+alias pir='kitty +kitten ssh freret@100.109.17.69'
 alias c='cursor'
 alias gfp='git fetch -p'
 alias gitrb='git removed-branches'
