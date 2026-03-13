@@ -1,0 +1,1115 @@
+#!/Users/reillyfreret/.qutebrowser-venv/bin/python3
+
+# SPDX-FileCopyrightText: Chris Braun (cryzed) <cryzed@googlemail.com>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""
+Insert login information using Bitwarden CLI and a dmenu-compatible application
+(e.g. dmenu, rofi -dmenu, ...).
+"""
+
+USAGE = """The domain of the site has to be in the name of the Bitwarden entry, for example: "github.com/cryzed" or
+"websites/github.com".  The login information is inserted by emulating key events using qutebrowser's fake-key command in this manner:
+[USERNAME]<Tab>[PASSWORD], which is compatible with almost all login forms.
+
+If enabled, with the `--totp` flag, it will also move the TOTP code to the
+clipboard, much like the Firefox add-on.
+
+You must log into Bitwarden CLI using `bw login` prior to use of this script.
+The session key will be stored using keyctl for the number of seconds passed to
+the --auto-lock option.
+
+To use in qutebrowser, run: `spawn --userscript qute-bitwarden`
+"""
+
+EPILOG = """Dependencies: tldextract (Python 3 module), pyperclip (optional
+Python module, used for TOTP codes), Bitwarden CLI (1.7.4 is known to work
+but older versions may well also work)
+
+WARNING: The login details are viewable as plaintext in qutebrowser's debug log
+(qute://log) and might be shared if you decide to submit a crash report!"""
+
+import argparse
+import base64
+import enum
+import functools
+import os
+import re
+import shlex
+import socket
+import subprocess
+import sys
+import json
+import time
+import tldextract
+
+os.environ['PATH'] = '/opt/homebrew/bin:' + os.environ.get('PATH', '')
+
+argument_parser = argparse.ArgumentParser(
+    description=__doc__,
+    usage=USAGE,
+    epilog=EPILOG,
+)
+argument_parser.add_argument('url', nargs='?', default=os.getenv('QUTE_URL'))
+argument_parser.add_argument('--dmenu-invocation', '-d', default='choose',
+                             help='Invocation used to execute a dmenu-provider')
+argument_parser.add_argument('--password-prompt-invocation', '-p', default='osascript -e \'Tell application "System Events" to display dialog "Master Password" default answer "" with hidden answer\' -e \'text returned of result\'',
+                             help='Invocation used to prompt the user for their Bitwarden password')
+argument_parser.add_argument('--no-insert-mode', '-n', dest='insert_mode', action='store_false',
+                             help="Don't automatically enter insert mode")
+argument_parser.add_argument('--totp', '-t', action='store_true',
+                             help="Copy TOTP key to clipboard")
+argument_parser.add_argument('--io-encoding', '-i', default='UTF-8',
+                             help='Encoding used to communicate with subprocesses')
+argument_parser.add_argument('--merge-candidates', '-m', action='store_true',
+                             help='Merge pass candidates for fully-qualified and registered domain name')
+argument_parser.add_argument('--auto-lock', type=int, default=3600,
+                             help='Automatically lock the vault after this many seconds')
+argument_parser.add_argument('--watch-seconds', type=float, default=0.0,
+                             help='Keep watching the page for login fields for this many seconds before giving up')
+argument_parser.add_argument('--fail-on-no-candidates', action='store_true',
+                             help='Return error if no Bitwarden entries match the current URL')
+argument_parser.add_argument('--debug', action='store_true',
+                             help='Show debugging messages in qutebrowser and JS console')
+argument_parser.add_argument('--daemon', action='store_true',
+                             help='Run as long-lived daemon process')
+argument_parser.add_argument('--start-daemon', action='store_true',
+                             help='Start daemon in background and exit')
+argument_parser.add_argument('--stop-daemon', action='store_true',
+                             help='Stop daemon and exit')
+argument_parser.add_argument('--use-daemon', action='store_true',
+                             help='Use daemon for fast credential lookup')
+argument_parser.add_argument('--daemon-autostart', action='store_true',
+                             help='Start daemon automatically if not running')
+argument_parser.add_argument('--daemon-socket', default='~/.cache/qute-bitwarden/qute-bitwarden.sock',
+                             help='UNIX socket path used for daemon communication')
+argument_parser.add_argument('--daemon-timeout', type=float, default=30.0,
+                             help='Timeout in seconds for daemon communication')
+group = argument_parser.add_mutually_exclusive_group()
+group.add_argument('--username-only', '-e',
+                   action='store_true', help='Only insert username')
+group.add_argument('--password-only', '-w',
+                   action='store_true', help='Only insert password')
+group.add_argument('--totp-only', '-T',
+                   action='store_true', help='Only insert totp code')
+
+stderr = functools.partial(print, file=sys.stderr)
+
+
+class ExitCodes(enum.IntEnum):
+    SUCCESS = 0
+    FAILURE = 1
+    # 1 is automatically used if Python throws an exception
+    NO_PASS_CANDIDATES = 2
+    COULD_NOT_MATCH_USERNAME = 3
+    COULD_NOT_MATCH_PASSWORD = 4
+
+
+def qute_command(command):
+    with open(os.environ['QUTE_FIFO'], 'w') as fifo:
+        fifo.write(command + '\n')
+        fifo.flush()
+
+
+def ask_password(password_prompt_invocation):
+    process = subprocess.run(
+        shlex.split(password_prompt_invocation),
+        text=True,
+        stdout=subprocess.PIPE,
+    )
+    if process.returncode > 0:
+        raise Exception('Could not unlock vault')
+    master_pass = process.stdout.strip()
+    return subprocess.check_output(
+        ['bw', 'unlock', '--raw', '--passwordenv', 'BW_MASTERPASS'],
+        env={**os.environ, 'BW_MASTERPASS': master_pass},
+        text=True,
+    ).strip()
+
+def get_session_key(auto_lock, password_prompt_invocation):
+    service = 'qute-bitwarden'
+    account = 'bw_session'
+
+    if auto_lock == 0:
+        # Purge any cached session
+        subprocess.call(
+            ['security', 'delete-generic-password', '-s', service, '-a', account],
+            stderr=subprocess.DEVNULL,
+        )
+        return ask_password(password_prompt_invocation)
+    else:
+        # Try to retrieve cached session from Keychain
+        process = subprocess.run(
+            ['security', 'find-generic-password', '-s', service, '-a', account, '-w'],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+        if process.returncode == 0:
+            return process.stdout.strip()
+
+        # Not cached — unlock and store
+        session = ask_password(password_prompt_invocation)
+        if not session:
+            raise Exception('Could not unlock vault')
+
+        subprocess.check_call(
+            ['security', 'add-generic-password', '-s', service, '-a', account, '-w', session, '-U'],
+        )
+        return session
+
+
+# def get_session_key(auto_lock, password_prompt_invocation):
+#     if auto_lock == 0:
+#         subprocess.call(['keyctl', 'purge', 'user', 'bw_session'])
+#         return ask_password(password_prompt_invocation)
+#     else:
+#         process = subprocess.run(
+#             ['keyctl', 'request', 'user', 'bw_session'],
+#             text=True,
+#             stdout=subprocess.PIPE,
+#         )
+#         key_id = process.stdout.strip()
+#         if process.returncode > 0:
+#             session = ask_password(password_prompt_invocation)
+#             if not session:
+#                 raise Exception('Could not unlock vault')
+#             key_id = subprocess.check_output(
+#                 ['keyctl', 'add', 'user', 'bw_session', session, '@u'],
+#                 text=True,
+#             ).strip()
+# 
+#         if auto_lock > 0:
+#             subprocess.call(['keyctl', 'timeout', str(key_id), str(auto_lock)])
+#         return subprocess.check_output(
+#             ['keyctl', 'pipe', str(key_id)],
+#             text=True,
+#         ).strip()
+
+
+def pass_(domain, encoding, auto_lock, password_prompt_invocation):
+    session_key = get_session_key(auto_lock, password_prompt_invocation)
+    process = subprocess.run(
+        ['bw', 'list', 'items', '--nointeraction', '--session', session_key, '--url', domain],
+        capture_output=True,
+    )
+
+    err = process.stderr.decode(encoding).strip()
+    if err:
+        msg = 'Bitwarden CLI returned for {:s} - {:s}'.format(domain, err)
+        stderr(msg)
+
+        if "Vault is locked" in err:
+            stderr("Bitwarden Vault got locked, trying again with clean session")
+            return pass_(domain, encoding, 0, password_prompt_invocation)
+
+    if process.returncode:
+        return '[]'
+
+    out = process.stdout.decode(encoding).strip()
+
+    return out
+
+
+def get_totp_code(selection_id, domain_name, encoding, auto_lock, password_prompt_invocation):
+    session_key = get_session_key(auto_lock, password_prompt_invocation)
+    lookup_terms = [selection_id]
+    if domain_name and domain_name not in lookup_terms:
+        lookup_terms.append(domain_name)
+
+    for term in lookup_terms:
+        process = subprocess.run(
+            ['bw', 'get', 'totp', '--nointeraction', '--session', session_key, term],
+            capture_output=True,
+        )
+        err = process.stderr.decode(encoding).strip()
+        if err and "Vault is locked" in err:
+            stderr("Bitwarden Vault got locked, trying again with clean session")
+            return get_totp_code(selection_id, domain_name, encoding, 0, password_prompt_invocation)
+        if process.returncode == 0:
+            out = process.stdout.decode(encoding).strip()
+            if out and out != '[]':
+                return out
+
+    # One sync retry can fix stale status/cache issues.
+    subprocess.run(
+        ['bw', 'sync', '--nointeraction', '--session', session_key],
+        capture_output=True,
+    )
+    for term in lookup_terms:
+        process = subprocess.run(
+            ['bw', 'get', 'totp', '--nointeraction', '--session', session_key, term],
+            capture_output=True,
+        )
+        if process.returncode == 0:
+            out = process.stdout.decode(encoding).strip()
+            if out and out != '[]':
+                return out
+
+    return ''
+
+
+def dmenu(items, invocation, encoding):
+    command = shlex.split(invocation)
+    process = subprocess.run(command, input='\n'.join(
+        items).encode(encoding), stdout=subprocess.PIPE)
+    return process.stdout.decode(encoding).strip()
+
+
+def fake_key_raw(text):
+    for character in text:
+        # Escape all characters by default, space requires special handling
+        sequence = '" "' if character == ' ' else r'\{}'.format(character)
+        qute_command('fake-key {}'.format(sequence))
+
+
+def _quote_for_qute_command(value):
+    # qutebrowser command arguments use a shell-like parser; single-quote and
+    # escape embedded single quotes.
+    return "'" + value.replace("'", "'\"'\"'") + "'"
+
+
+def debug_message(text, enabled):
+    if not enabled:
+        return
+    message = '[qute-bitwarden] ' + text
+    if 'QUTE_FIFO' in os.environ:
+        qute_command('message-info ' + _quote_for_qute_command(message))
+    else:
+        stderr(message)
+
+
+def info_message(text):
+    if 'QUTE_FIFO' in os.environ:
+        qute_command('message-info ' + _quote_for_qute_command(text))
+    else:
+        print(text)
+
+
+def resolve_targets(url):
+    extract_result = tldextract.extract(url)
+    raw_targets = [
+        extract_result.fqdn,
+        (
+            extract_result.top_domain_under_public_suffix
+            if hasattr(extract_result, "top_domain_under_public_suffix")
+            else extract_result.registered_domain
+        ),
+        extract_result.subdomain + "." + extract_result.domain,
+        extract_result.domain,
+        extract_result.ipv4,
+    ]
+    # Keep order stable while removing duplicates/empty values.
+    targets = []
+    for target in raw_targets:
+        if target and target not in targets:
+            targets.append(target)
+    return targets
+
+
+def daemon_socket_path(path):
+    return os.path.expanduser(path)
+
+
+def daemon_request(socket_path, payload, timeout):
+    request = (json.dumps(payload) + '\n').encode('utf-8')
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+        # Keep connect timeout short-ish, but allow longer response times for
+        # prompts like initial Bitwarden unlock in daemon mode.
+        client.settimeout(timeout)
+        client.connect(socket_path)
+        client.sendall(request)
+        client.settimeout(max(timeout, 60.0))
+        chunks = []
+        while True:
+            data = client.recv(4096)
+            if not data:
+                break
+            chunks.append(data)
+            if b'\n' in data:
+                break
+    if not chunks:
+        raise RuntimeError('Empty response from daemon')
+    line = b''.join(chunks).split(b'\n', 1)[0]
+    return json.loads(line.decode('utf-8'))
+
+
+def start_daemon_process(arguments):
+    socket_path = daemon_socket_path(arguments.daemon_socket)
+    command = [
+        sys.executable,
+        os.path.abspath(__file__),
+        '--daemon',
+        '--daemon-socket',
+        socket_path,
+        '--password-prompt-invocation',
+        arguments.password_prompt_invocation,
+        '--io-encoding',
+        arguments.io_encoding,
+        '--auto-lock',
+        str(arguments.auto_lock),
+    ]
+    subprocess.Popen(
+        command,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+
+def wait_for_daemon(socket_path, timeout):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            response = daemon_request(socket_path, {'action': 'ping'}, timeout=0.4)
+            if response.get('ok'):
+                return True
+        except Exception:
+            time.sleep(0.1)
+    return False
+
+
+def daemon_bw_list_items(domain, state, encoding, password_prompt_invocation):
+    for _ in range(2):
+        if not state.get('session_key'):
+            state['session_key'] = ask_password(password_prompt_invocation)
+        process = subprocess.run(
+            ['bw', 'list', 'items', '--nointeraction', '--session', state['session_key'], '--url', domain],
+            capture_output=True,
+        )
+        err = process.stderr.decode(encoding).strip()
+        if "Vault is locked" in err:
+            state['session_key'] = None
+            continue
+        if process.returncode:
+            return []
+        out = process.stdout.decode(encoding).strip()
+        if not out:
+            return []
+        return json.loads(out)
+    return []
+
+
+def daemon_bw_get_totp(selection_id, fallback_name, state, encoding, password_prompt_invocation):
+    last_error = ''
+    lookup_terms = [selection_id]
+    if fallback_name and fallback_name not in lookup_terms:
+        lookup_terms.append(fallback_name)
+    for _ in range(2):
+        if not state.get('session_key'):
+            state['session_key'] = ask_password(password_prompt_invocation)
+        for term in lookup_terms:
+            process = subprocess.run(
+                ['bw', 'get', 'totp', '--nointeraction', '--session', state['session_key'], term],
+                capture_output=True,
+            )
+            err = process.stderr.decode(encoding).strip()
+            if "Vault is locked" in err:
+                state['session_key'] = None
+                last_error = err
+                break
+            if process.returncode:
+                last_error = err or 'bw get totp failed'
+                continue
+            code = process.stdout.decode(encoding).strip()
+            if code and code != '[]':
+                return {'totp': code, 'error': ''}
+            last_error = err or 'bw get totp returned empty output'
+        else:
+            # No lock event in this pass; try a sync+retry.
+            subprocess.run(
+                ['bw', 'sync', '--nointeraction', '--session', state['session_key']],
+                capture_output=True,
+            )
+            for term in lookup_terms:
+                process = subprocess.run(
+                    ['bw', 'get', 'totp', '--nointeraction', '--session', state['session_key'], term],
+                    capture_output=True,
+                )
+                if process.returncode == 0:
+                    code = process.stdout.decode(encoding).strip()
+                    if code and code != '[]':
+                        return {'totp': code, 'error': ''}
+    return {'totp': '', 'error': last_error}
+
+
+def daemon_lookup(url, merge_candidates, state, encoding, password_prompt_invocation):
+    now = time.time()
+    ttl = 120.0
+    candidates = []
+    for target in resolve_targets(url):
+        cached = state['cache'].get(target)
+        if cached and now - cached['ts'] <= ttl:
+            target_candidates = cached['items']
+        else:
+            target_candidates = daemon_bw_list_items(target, state, encoding, password_prompt_invocation)
+            state['cache'][target] = {'ts': now, 'items': target_candidates}
+        if not target_candidates:
+            continue
+        candidates.extend(target_candidates)
+        if not merge_candidates:
+            break
+    return candidates
+
+
+def run_daemon(arguments):
+    socket_path = daemon_socket_path(arguments.daemon_socket)
+    socket_dir = os.path.dirname(socket_path)
+    if socket_dir:
+        os.makedirs(socket_dir, exist_ok=True)
+
+    if os.path.exists(socket_path):
+        try:
+            response = daemon_request(socket_path, {'action': 'ping'}, timeout=0.3)
+            if response.get('ok'):
+                stderr('Daemon already running: {}'.format(socket_path))
+                return ExitCodes.SUCCESS
+        except Exception:
+            os.unlink(socket_path)
+
+    state = {'session_key': None, 'cache': {}, 'last_selection': None}
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        server.bind(socket_path)
+        os.chmod(socket_path, 0o600)
+        server.listen(8)
+        running = True
+        while running:
+            conn, _ = server.accept()
+            with conn:
+                data = b''
+                while b'\n' not in data:
+                    chunk = conn.recv(4096)
+                    if not chunk:
+                        break
+                    data += chunk
+                if not data:
+                    continue
+                try:
+                    request = json.loads(data.split(b'\n', 1)[0].decode('utf-8'))
+                except Exception as error:
+                    response = {'ok': False, 'error': 'bad_request', 'detail': str(error)}
+                else:
+                    action = request.get('action')
+                    if action == 'ping':
+                        response = {'ok': True}
+                    elif action == 'stop':
+                        response = {'ok': True}
+                        running = False
+                    elif action == 'lookup':
+                        response = {
+                            'ok': True,
+                            'candidates': daemon_lookup(
+                                request.get('url', ''),
+                                bool(request.get('merge_candidates', False)),
+                                state,
+                                arguments.io_encoding,
+                                arguments.password_prompt_invocation,
+                            ),
+                        }
+                    elif action == 'remember_selection':
+                        selection_id = request.get('id', '')
+                        if selection_id:
+                            state['last_selection'] = {
+                                'id': selection_id,
+                                'name': request.get('name', ''),
+                            }
+                            response = {'ok': True}
+                        else:
+                            response = {'ok': False, 'error': 'missing_selection_id'}
+                    elif action == 'totp_last':
+                        last = state.get('last_selection')
+                        if not last:
+                            response = {'ok': False, 'error': 'no_last_selection'}
+                        else:
+                            totp_result = daemon_bw_get_totp(
+                                last.get('id', ''),
+                                last.get('name', ''),
+                                state,
+                                arguments.io_encoding,
+                                arguments.password_prompt_invocation,
+                            )
+                            response = {
+                                'ok': True,
+                                'totp': totp_result.get('totp', ''),
+                                'error': totp_result.get('error', ''),
+                                'name': last.get('name', ''),
+                            }
+                    elif action == 'totp':
+                        totp_result = daemon_bw_get_totp(
+                            request.get('id', ''),
+                            request.get('name', ''),
+                            state,
+                            arguments.io_encoding,
+                            arguments.password_prompt_invocation,
+                        )
+                        response = {
+                            'ok': True,
+                            'totp': totp_result.get('totp', ''),
+                            'error': totp_result.get('error', ''),
+                        }
+                    else:
+                        response = {'ok': False, 'error': 'unknown_action'}
+                conn.sendall((json.dumps(response) + '\n').encode('utf-8'))
+    finally:
+        server.close()
+        if os.path.exists(socket_path):
+            os.unlink(socket_path)
+
+
+def fill_credentials_with_dom_watch(username, password, watch_seconds, debug=False):
+    js = f"""
+(() => {{
+  const usernameValue = {json.dumps(username)};
+  const passwordValue = {json.dumps(password)};
+  const watchMs = Math.max(0, Math.floor({watch_seconds} * 1000));
+  const startedAt = Date.now();
+  const debug = {str(debug).lower()};
+  const log = (...args) => {{
+    if (debug) console.info('[qute-bitwarden]', ...args);
+  }};
+
+  const usernameSelector = [
+    'input[autocomplete="username"]',
+    'input[autocomplete="email"]',
+    'input[type="email"]',
+    'input[name*="user" i]',
+    'input[name*="email" i]',
+    'input[id*="user" i]',
+    'input[id*="email" i]',
+    'input[type="text"]'
+  ].join(',');
+
+  const passwordSelector = [
+    'input[type="password"]',
+    'input[autocomplete="current-password"]',
+    'input[autocomplete="new-password"]'
+  ].join(',');
+
+  const isVisible = (el) => {{
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    if (el.disabled || el.readOnly) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }};
+
+  const firstVisible = (selector) => {{
+    for (const el of document.querySelectorAll(selector)) {{
+      if (isVisible(el)) return el;
+    }}
+    return null;
+  }};
+
+  const dispatchValue = (el, value) => {{
+    if (!el) return;
+    el.focus();
+    el.value = value;
+    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+  }};
+
+  const attemptFill = () => {{
+    const userEl = firstVisible(usernameSelector);
+    const passEl = firstVisible(passwordSelector);
+    log('attemptFill', {{ hasUsername: !!userEl, hasPassword: !!passEl }});
+
+    if (userEl) dispatchValue(userEl, usernameValue);
+    if (passEl) dispatchValue(passEl, passwordValue);
+
+    if (passEl || userEl) {{
+      (passEl || userEl).focus();
+      log('filled');
+      return true;
+    }}
+    return false;
+  }};
+
+  if (attemptFill()) return true;
+  log('initial attempt failed');
+  if (watchMs <= 0) return false;
+
+  let timer = null;
+  let quickTimer = null;
+
+  const stop = () => {{
+    observer.disconnect();
+    if (timer) clearInterval(timer);
+    if (quickTimer) clearInterval(quickTimer);
+  }};
+
+  const doneOrTimeout = () => {{
+    if (attemptFill()) {{
+      stop();
+      return true;
+    }}
+    if (Date.now() - startedAt >= watchMs) {{
+      stop();
+      log('timed out');
+      return true;
+    }}
+    return false;
+  }};
+
+  const observer = new MutationObserver(() => {{
+    doneOrTimeout();
+  }});
+  observer.observe(document.documentElement, {{
+    subtree: true,
+    childList: true,
+    attributes: true
+  }});
+
+  // Quick burst checks make dynamic forms feel much snappier right after
+  // invoking the userscript.
+  let burstRuns = 0;
+  quickTimer = setInterval(() => {{
+    burstRuns += 1;
+    if (doneOrTimeout() || burstRuns >= 30) {{
+      clearInterval(quickTimer);
+      quickTimer = null;
+    }}
+  }}, 50);
+
+  // Steady-state polling for longer waits.
+  timer = setInterval(doneOrTimeout, 100);
+  setTimeout(stop, watchMs + 1000);
+  log('watching for fields', watchMs, 'ms');
+  return false;
+}})();
+"""
+    js_payload = 'eval(atob({}));'.format(json.dumps(base64.b64encode(js.encode('utf-8')).decode('ascii')))
+    # jseval expects raw JS expression text; extra quote wrapping turns this
+    # into a string literal instead of executing it.
+    qute_command('jseval --quiet -- ' + js_payload)
+
+
+def fill_credentials_smart_once(username, password, debug=False):
+    js = f"""
+(() => {{
+  const usernameValue = {json.dumps(username)};
+  const passwordValue = {json.dumps(password)};
+  const debug = {str(debug).lower()};
+  const log = (...args) => {{
+    if (debug) console.info('[qute-bitwarden]', ...args);
+  }};
+
+  const usernameSelector = [
+    'input[autocomplete="username"]',
+    'input[autocomplete="email"]',
+    'input[type="email"]',
+    'input[name*="user" i]',
+    'input[name*="email" i]',
+    'input[id*="user" i]',
+    'input[id*="email" i]',
+    'input[type="text"]'
+  ].join(',');
+
+  const passwordSelector = [
+    'input[type="password"]',
+    'input[autocomplete="current-password"]',
+    'input[autocomplete="new-password"]'
+  ].join(',');
+
+  const isVisible = (el) => {{
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    if (el.disabled || el.readOnly) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }};
+
+  const firstVisible = (selector) => {{
+    for (const el of document.querySelectorAll(selector)) {{
+      if (isVisible(el)) return el;
+    }}
+    return null;
+  }};
+
+  const setValue = (el, value) => {{
+    if (!el) return;
+    el.focus();
+    el.value = value;
+    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+  }};
+
+  const active = document.activeElement;
+  const activeIsPassword =
+    active &&
+    active.tagName === 'INPUT' &&
+    active.type &&
+    active.type.toLowerCase() === 'password' &&
+    isVisible(active);
+
+  if (activeIsPassword) {{
+    setValue(active, passwordValue);
+    log('filled active password field only');
+    return true;
+  }}
+
+  const userEl = firstVisible(usernameSelector);
+  const passEl = firstVisible(passwordSelector);
+  log('smart fill', {{ hasUsername: !!userEl, hasPassword: !!passEl }});
+
+  if (userEl && passEl) {{
+    setValue(userEl, usernameValue);
+    setValue(passEl, passwordValue);
+    passEl.focus();
+    return true;
+  }}
+  if (passEl) {{
+    setValue(passEl, passwordValue);
+    passEl.focus();
+    return true;
+  }}
+  if (userEl) {{
+    setValue(userEl, usernameValue);
+    userEl.focus();
+    return true;
+  }}
+
+  log('no visible login fields found for smart fill');
+  return false;
+}})();
+"""
+    js_payload = 'eval(atob({}));'.format(json.dumps(base64.b64encode(js.encode('utf-8')).decode('ascii')))
+    qute_command('jseval --quiet -- ' + js_payload)
+
+
+def fill_one_time_code_smart_once(code, debug=False):
+    js = f"""
+(() => {{
+  const codeValue = {json.dumps(code)};
+  const debug = {str(debug).lower()};
+  const log = (...args) => {{
+    if (debug) console.info('[qute-bitwarden]', ...args);
+  }};
+
+  const isVisible = (el) => {{
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    if (el.disabled || el.readOnly) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }};
+
+  const setValue = (el, value) => {{
+    el.focus();
+    el.value = value;
+    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+    el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+  }};
+
+  const active = document.activeElement;
+  if (active && isVisible(active) && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {{
+    setValue(active, codeValue);
+    log('filled active OTP field');
+    return true;
+  }}
+
+  const otpSelector = [
+    'input[autocomplete="one-time-code"]',
+    'input[inputmode="numeric"]',
+    'input[name*="otp" i]',
+    'input[id*="otp" i]',
+    'input[name*="code" i]',
+    'input[id*="code" i]',
+    'input[type="tel"]',
+    'input[type="text"]'
+  ].join(',');
+
+  for (const el of document.querySelectorAll(otpSelector)) {{
+    if (!isVisible(el)) continue;
+    setValue(el, codeValue);
+    log('filled visible OTP-like field');
+    return true;
+  }}
+
+  log('no OTP input found');
+  return false;
+}})();
+"""
+    js_payload = 'eval(atob({}));'.format(json.dumps(base64.b64encode(js.encode('utf-8')).decode('ascii')))
+    qute_command('jseval --quiet -- ' + js_payload)
+
+
+def normalize_totp_code(value):
+    if not value:
+        return ''
+    candidate = str(value).strip().replace(' ', '')
+    if candidate == '[]':
+        return ''
+    # TOTP codes are numeric (usually 6 digits, sometimes 8 in some systems).
+    if re.fullmatch(r'\d{6,8}', candidate):
+        return candidate
+    return ''
+
+
+def main(arguments):
+    socket_path = daemon_socket_path(arguments.daemon_socket)
+
+    if arguments.daemon:
+        return run_daemon(arguments)
+
+    if arguments.start_daemon:
+        start_daemon_process(arguments)
+        if wait_for_daemon(socket_path, max(1.0, arguments.daemon_timeout)):
+            info_message('qute-bitwarden daemon started')
+            return ExitCodes.SUCCESS
+        stderr('Could not start qute-bitwarden daemon')
+        return ExitCodes.FAILURE
+
+    if arguments.stop_daemon:
+        try:
+            daemon_request(socket_path, {'action': 'stop'}, arguments.daemon_timeout)
+            info_message('qute-bitwarden daemon stopped')
+            return ExitCodes.SUCCESS
+        except Exception as error:
+            stderr('Could not stop daemon: {}'.format(error))
+            return ExitCodes.FAILURE
+
+    if not arguments.url:
+        argument_parser.print_help()
+        return ExitCodes.FAILURE
+
+    if arguments.totp_only and arguments.use_daemon:
+        try:
+            last_totp_response = daemon_request(
+                socket_path,
+                {'action': 'totp_last'},
+                arguments.daemon_timeout,
+            )
+            if last_totp_response.get('ok'):
+                last_totp_code = last_totp_response.get('totp', '')
+                last_totp_code = normalize_totp_code(last_totp_code)
+                if last_totp_code:
+                    debug_message(
+                        'Using TOTP from last selected entry "{}"'.format(last_totp_response.get('name', '')),
+                        arguments.debug,
+                    )
+                    fill_one_time_code_smart_once(last_totp_code, arguments.debug)
+                    if arguments.insert_mode:
+                        qute_command('mode-enter insert')
+                    return ExitCodes.SUCCESS
+                debug_message(
+                    'Last-selection TOTP failed: {}'.format(last_totp_response.get('error', 'empty result')),
+                    arguments.debug,
+                )
+        except Exception as error:
+            debug_message('Last-selection TOTP unavailable: {}'.format(error), arguments.debug)
+
+    candidates = []
+    daemon_active = False
+
+    if arguments.use_daemon:
+        try:
+            response = daemon_request(
+                socket_path,
+                {'action': 'lookup', 'url': arguments.url, 'merge_candidates': arguments.merge_candidates},
+                arguments.daemon_timeout,
+            )
+            if response.get('ok'):
+                candidates = response.get('candidates', [])
+                daemon_active = True
+        except TimeoutError:
+            debug_message('Daemon lookup timed out; falling back to direct mode', arguments.debug)
+        except Exception:
+            if arguments.daemon_autostart:
+                debug_message('Daemon unavailable; starting background daemon', arguments.debug)
+                start_daemon_process(arguments)
+                if wait_for_daemon(socket_path, max(1.0, arguments.daemon_timeout)):
+                    try:
+                        response = daemon_request(
+                            socket_path,
+                            {'action': 'lookup', 'url': arguments.url, 'merge_candidates': arguments.merge_candidates},
+                            arguments.daemon_timeout,
+                        )
+                        if response.get('ok'):
+                            candidates = response.get('candidates', [])
+                            daemon_active = True
+                    except TimeoutError:
+                        debug_message('Daemon timed out after autostart; falling back to direct mode', arguments.debug)
+
+    if not daemon_active:
+        for target in resolve_targets(arguments.url):
+            target_candidates = json.loads(
+                pass_(
+                    target,
+                    arguments.io_encoding,
+                    arguments.auto_lock,
+                    arguments.password_prompt_invocation,
+                )
+            )
+            if not target_candidates:
+                debug_message('No candidates for target {}'.format(target), arguments.debug)
+                continue
+
+            candidates = candidates + target_candidates
+            debug_message('Found {} candidates for target {}'.format(len(target_candidates), target), arguments.debug)
+            if not arguments.merge_candidates:
+                break
+
+    if not candidates:
+        message = 'No pass candidates for URL {!r} found!'.format(arguments.url)
+        if arguments.fail_on_no_candidates:
+            stderr(message)
+            return ExitCodes.NO_PASS_CANDIDATES
+        info_message(message)
+        return ExitCodes.SUCCESS
+
+    if len(candidates) == 1:
+        selection = candidates.pop()
+    else:
+        choices = ['{:s} | {:s}'.format(c['name'], c['login']['username']) for c in candidates]
+        choice = dmenu(choices, arguments.dmenu_invocation, arguments.io_encoding)
+        choice_tokens = choice.split('|')
+        choice_name = choice_tokens[0].strip()
+        choice_username = choice_tokens[1].strip()
+        selection = next((c for (i, c) in enumerate(candidates)
+                          if c['name'] == choice_name
+                          and c['login']['username'] == choice_username),
+                         None)
+
+    # Nothing was selected, simply return
+    if not selection:
+        return ExitCodes.SUCCESS
+
+    username = selection['login']['username']
+    password = selection['login']['password']
+    totp = selection['login']['totp']
+    debug_message('Selected entry "{}"'.format(selection['name']), arguments.debug)
+    if daemon_active:
+        try:
+            daemon_request(
+                socket_path,
+                {'action': 'remember_selection', 'id': selection['id'], 'name': selection['name']},
+                arguments.daemon_timeout,
+            )
+        except Exception as error:
+            debug_message('Could not remember selection in daemon: {}'.format(error), arguments.debug)
+
+    if arguments.username_only:
+        fake_key_raw(username)
+    elif arguments.password_only:
+        fake_key_raw(password)
+    elif arguments.totp_only:
+        # No point in moving it to the clipboard in this case
+        daemon_totp_error = ''
+        if daemon_active:
+            daemon_totp_response = daemon_request(
+                socket_path,
+                {'action': 'totp', 'id': selection['id'], 'name': selection['name']},
+                arguments.daemon_timeout,
+            )
+            totp_code = daemon_totp_response.get('totp', '')
+            daemon_totp_error = daemon_totp_response.get('error', '')
+            if not totp_code:
+                debug_message(
+                    'Daemon TOTP lookup failed: {}'.format(daemon_totp_error or 'empty result'),
+                    arguments.debug,
+                )
+                # Fallback: direct CLI path in case daemon has stale state.
+                totp_code = get_totp_code(
+                    selection['id'],
+                    selection['name'],
+                    arguments.io_encoding,
+                    arguments.auto_lock,
+                    arguments.password_prompt_invocation,
+                )
+        else:
+            totp_code = get_totp_code(
+                selection['id'],
+                selection['name'],
+                arguments.io_encoding,
+                arguments.auto_lock,
+                arguments.password_prompt_invocation,
+            )
+        totp_code = normalize_totp_code(totp_code)
+        if arguments.debug:
+            debug_message(
+                'TOTP-only candidate shape: len={} numeric={}'.format(
+                    len(totp_code) if totp_code else 0,
+                    bool(totp_code and totp_code.isdigit()),
+                ),
+                arguments.debug,
+            )
+        if not totp_code:
+            info_message(
+                'No TOTP code available for "{}"{}'.format(
+                    selection['name'],
+                    ' ({})'.format(daemon_totp_error) if daemon_totp_error else '',
+                )
+            )
+        else:
+            debug_message('Filling TOTP code into active field', arguments.debug)
+            fill_one_time_code_smart_once(totp_code, arguments.debug)
+    else:
+        if arguments.watch_seconds > 0:
+            # Optional dynamic-form mode for SPAs where fields are inserted later.
+            debug_message('Injecting DOM watcher ({}s)'.format(arguments.watch_seconds), arguments.debug)
+            fill_credentials_with_dom_watch(username, password, arguments.watch_seconds, arguments.debug)
+        else:
+            # Fast path for manual invocation when fields are already visible.
+            # This handles both combined forms and two-step username->password flows.
+            debug_message('Using immediate smart fill', arguments.debug)
+            fill_credentials_smart_once(username, password, arguments.debug)
+
+    if arguments.insert_mode:
+        qute_command('mode-enter insert')
+
+    # If it finds a TOTP code, it copies it to the clipboard,
+    # which is the same behavior as the Firefox add-on.
+    if not arguments.totp_only and arguments.totp:
+        # The import is done here, to make pyperclip an optional dependency
+        import pyperclip
+        daemon_totp_error = ''
+        if daemon_active:
+            daemon_totp_response = daemon_request(
+                socket_path,
+                {'action': 'totp', 'id': selection['id'], 'name': selection['name']},
+                arguments.daemon_timeout,
+            )
+            totp_code = daemon_totp_response.get('totp', '')
+            daemon_totp_error = daemon_totp_response.get('error', '')
+            if not totp_code:
+                debug_message(
+                    'Daemon TOTP lookup failed: {}'.format(daemon_totp_error or 'empty result'),
+                    arguments.debug,
+                )
+                totp_code = get_totp_code(
+                    selection['id'],
+                    selection['name'],
+                    arguments.io_encoding,
+                    arguments.auto_lock,
+                    arguments.password_prompt_invocation,
+                )
+        else:
+            totp_code = get_totp_code(
+                selection['id'],
+                selection['name'],
+                arguments.io_encoding,
+                arguments.auto_lock,
+                arguments.password_prompt_invocation,
+            )
+        totp_code = normalize_totp_code(totp_code)
+        if totp_code:
+            pyperclip.copy(totp_code)
+        else:
+            info_message(
+                'No TOTP code available for "{}"{}'.format(
+                    selection['name'],
+                    ' ({})'.format(daemon_totp_error) if daemon_totp_error else '',
+                )
+            )
+
+    return ExitCodes.SUCCESS
+
+
+if __name__ == '__main__':
+    arguments = argument_parser.parse_args()
+    sys.exit(main(arguments))
