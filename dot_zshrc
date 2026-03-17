@@ -18,6 +18,7 @@ alias gs='git status'
 alias ghprcw='gh pr checks --watch'
 alias ghmerge='gh pr merge -sd'
 alias ncduc='ncdu --color dark'
+alias cz='chezmoi'
 
 bindkey '^u' backward-kill-line
 bindkey '^k' kill-line
