@@ -1,4 +1,5 @@
 config.load_autoconfig()
+config.set('window.hide_decoration', True)
 config.set('messages.timeout', 10000)  # 10 seconds
 config.bind('A', 'hint images userscript show_title')
 
