@@ -1,7 +1,6 @@
 #!/bin/bash
 
-### install items in Brewfile if Brewfile has changed
+### install items in bundle file if bundle file has changed
 
-# brewfile hash: {{ joinPath .chezmoi.sourceDir "Brewfile" | include | sha256sum }}
-brew bundle --file={{ joinPath .chezmoi.sourceDir "Brewfile" }}
-
+# nanofile hash: {{ joinPath .chezmoi.sourceDir "Nanobrew" | include | sha256sum }}
+nb bundle install {{ joinPath .chezmoi.sourceDir "Nanobrew" }}

@@ -1,7 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# # homebrew (currently only for casks/taps; will migrate everything to zb when they catch up)
+# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# echo "Homebrew installation complete."
 
-echo "Homebrew installation complete."
+# # zerobrew
+# curl -fsSL https://zerobrew.rs/install | bash
+# echo "ZeroBrew installation complete."
 
+# nanobrew
+curl -fsSL https://nanobrew.trilok.ai/install | bash
+echo "NanoBrew installation complete."

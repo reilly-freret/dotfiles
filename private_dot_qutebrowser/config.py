@@ -9,4 +9,3 @@ config.bind(',Bx', 'spawn --userscript qbw-simple --stop-daemon')
 config.bind(',U', 'spawn --userscript qbw-simple --username')
 config.bind(',P', 'spawn --userscript qbw-simple --password')
 config.bind(',O', 'spawn --userscript qbw-simple --totp')
-
