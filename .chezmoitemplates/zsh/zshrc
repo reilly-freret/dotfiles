@@ -1,4 +1,4 @@
-ZSH_THEME="agnoster" # set by `omz`
+# ZSH_THEME="agnoster" # set by `omz`
 export DEFAULT_USER="reillyfreret"
 export ZSH="$HOME/.oh-my-zsh"
 COMPLETION_WAITING_DOTS="true"
@@ -20,6 +20,7 @@ alias ghprcw='gh pr checks --watch'
 alias ghmerge='gh pr merge -sd'
 alias ncduc='ncdu --color dark'
 alias cz='chezmoi'
+alias nv='nvim'
 
 bindkey '^u' backward-kill-line
 bindkey '^k' kill-line
@@ -32,71 +33,11 @@ function rfind {
   mdfind "kMDItemFSName=='*$1*'cd"
 }
 
-autoload -Uz compinit && compinit
-
-# The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/reillyfreret/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/reillyfreret/Downloads/google-cloud-sdk/path.zsh.inc'; fi
-
-# The next line enables shell command completion for gcloud.
-if [ -f '/Users/reillyfreret/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/reillyfreret/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
-
 # list most recent files in pwd
 function lr() {
   local n="${1:-5}"
   ls -lt | grep -v '^total' | head -n "$n"
 }
-
-# git commit in the withco format
-function wco() {
-  if [[ -z "$1" ]]; then
-    echo "Usage: wco \"commit message\""
-    return 1
-  fi
-
-  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || return 1
-
-  if [[ $branch =~ ^((WITH|PROD)-[0-9]+) ]]; then
-    if [[ -n "${BASH_VERSION:-}" ]]; then
-      ticket="${BASH_REMATCH[1]}"
-    else
-      ticket="${match[1]}"
-    fi
-    git commit -m "[$ticket] RF - $1"
-  else
-    git commit -m "RF - $1"
-  fi
-}
-
-
-if command -v ngrok &>/dev/null; then
-  eval "$(ngrok completion)"
-fi
-
-test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
-
-#compdef pnpm
-###-begin-pnpm-completion-###
-if type compdef &>/dev/null; then
-  _pnpm_completion () {
-    local reply
-    local si=$IFS
-
-    IFS=$'\n' reply=($(COMP_CWORD="$((CURRENT-1))" COMP_LINE="$BUFFER" COMP_POINT="$CURSOR" SHELL=zsh pnpm completion-server -- "${words[@]}"))
-    IFS=$si
-
-    if [ "$reply" = "__tabtab_complete_files__" ]; then
-      _files
-    else
-      _describe 'values' reply
-    fi
-  }
-  if [[ $zsh_eval_context == *func ]]; then
-    _pnpm_completion "$@"
-  else
-    compdef _pnpm_completion pnpm
-  fi
-fi
-###-end-pnpm-completion-###
 
 utcnow() {
   date -u +"%Y-%m-%dT%H:%M:%S"
@@ -108,8 +49,8 @@ export PATH="/opt/nanobrew/prefix/bin:$PATH"
 # mise
 eval "$(mise activate zsh)"
 
-# esp idf
-alias getidf=". $HOME/esp/esp-idf/export.sh"
-
 # chezmoi
 export PATH="$HOME/bin:$PATH"
+
+# starship
+eval "$(starship init zsh)"

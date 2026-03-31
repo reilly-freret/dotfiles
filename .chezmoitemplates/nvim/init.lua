@@ -1,11 +1,14 @@
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
-  vim.fn.system({
-    "git", "clone", "--filter=blob:none",
-    "https://github.com/folke/lazy.nvim.git",
-    "--branch=stable", lazypath,
-  })
+	vim.fn.system({
+		"git",
+		"clone",
+		"--filter=blob:none",
+		"https://github.com/folke/lazy.nvim.git",
+		"--branch=stable",
+		lazypath,
+	})
 end
 vim.opt.rtp:prepend(lazypath)
 
@@ -49,13 +52,27 @@ vim.opt.listchars = { tab = "▸ ", eol = "¬" }
 
 -- Plugins
 require("lazy").setup({
-    {
-      "nvim-treesitter/nvim-treesitter",
-      build = ":TSUpdate",
-      opts = {
-        ensure_installed = { "typescript", "tsx", "javascript" },
-        highlight = { enable = true },
-      },
-    },
-    { "kylechui/nvim-surround", event = "VeryLazy", opts = {} },
-  })
+	{
+		"nvim-treesitter/nvim-treesitter",
+		lazy = false,
+		build = ":TSUpdate",
+		config = function()
+			require("nvim-treesitter").setup({})
+			require("nvim-treesitter").install({ "javascript", "typescript", "tsx" })
+
+			vim.api.nvim_create_autocmd("FileType", {
+				pattern = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+				callback = function()
+					pcall(vim.treesitter.start)
+				end,
+			})
+		end,
+	},
+	{ "kylechui/nvim-surround", event = "VeryLazy", opts = {} },
+	{
+		"numToStr/Comment.nvim",
+		opts = {
+			-- add any options here
+		},
+	},
+})

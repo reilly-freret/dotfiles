@@ -1,0 +1,49 @@
+[
+    {
+        "context": "Editor && vim_mode == normal",
+        "bindings": {
+            "j": "vim::Down",
+            "k": "vim::Up",
+            "T T": "pane::CloseActiveItem",
+            "space": [
+                "workspace::SendKeystrokes",
+                "a space left"
+            ]
+        }
+    },
+    {
+        "context": "Editor && vim_mode == insert && !menu",
+        "bindings": {
+            "j k": [
+                "vim::SwitchMode",
+                "Normal"
+            ]
+        }
+    },
+    {
+        "context": "Editor && vim_mode == insert && menu",
+        "bindings": {
+            "j k": [
+                "workspace::SendKeystrokes",
+                "escape escape"
+            ]
+        }
+    },
+    {
+        "context": "vim_mode == visual",
+        "bindings": {
+            "shift-s": [
+                "vim::PushOperator",
+                {
+                    "AddSurrounds": {}
+                }
+            ]
+        }
+    },
+    {
+        "context": "Editor",
+        "bindings": {
+            "ctrl-m r": "pane::SplitAndMoveRight"
+        }
+    }
+]
