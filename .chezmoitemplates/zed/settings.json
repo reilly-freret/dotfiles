@@ -35,7 +35,9 @@
   "vim": {
     "use_smartcase_find": true
   },
-
+  "auto_install_extensions": {
+    "vercel-theme": true
+  },
   "theme_overrides": {
     "Vercel Dark": {
       "syntax": {
