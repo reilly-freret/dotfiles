@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+
+mkdir -p "$HOME/.zfunc"
+
+if mise x pnpm -- pnpm --version >/dev/null 2>&1; then
+  tmp_file="$(mktemp)"
+  mise x pnpm -- pnpm completion zsh >"$tmp_file"
+  mv "$tmp_file" "$HOME/.zfunc/_pnpm"
+else
+  echo "Skipping pnpm completion generation: pnpm is not available through mise yet."
+fi

@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+
+mkdir -p "$HOME/.zfunc"
+
+if mise x just -- just --version >/dev/null 2>&1; then
+  tmp_file="$(mktemp)"
+  mise x just -- just --completions zsh >"$tmp_file"
+  mv "$tmp_file" "$HOME/.zfunc/_just"
+else
+  echo "Skipping just completion generation: just is not available through mise yet."
+fi
