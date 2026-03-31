@@ -29,3 +29,15 @@ Use `.dotfiledata/` for symlink backing files when:
 ```tmpl
 {{ joinPath .chezmoi.sourceDir ".dotfiledata" "kitty" "kitty.conf" }}
 ```
+
+## What is currently using this
+
+- `private_dot_config/kitty/symlink_kitty.conf.tmpl` points to
+  `.dotfiledata/kitty/kitty.conf`.
+
+## Quick checklist for future additions
+
+- Put the raw file under `.dotfiledata/<app>/...`.
+- Add/update a `symlink_*.tmpl` at the destination path.
+- Keep the symlink template to a single `joinPath` line.
+- Run `chezmoi apply` and verify the target path is a symlink to chezmoi source.
