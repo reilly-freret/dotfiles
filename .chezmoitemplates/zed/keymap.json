@@ -14,10 +14,7 @@
     {
         "context": "Editor && vim_mode == insert && !menu",
         "bindings": {
-            "j k": [
-                "vim::SwitchMode",
-                "Normal"
-            ]
+            "j k": "vim::SwitchToNormalMode"
         }
     },
     {
@@ -32,18 +29,25 @@
     {
         "context": "vim_mode == visual",
         "bindings": {
-            "shift-s": [
-                "vim::PushOperator",
-                {
-                    "AddSurrounds": {}
-                }
-            ]
+            "shift-s": ["vim::PushAddSurrounds", {}]
         }
     },
     {
         "context": "Editor",
         "bindings": {
             "ctrl-m r": "pane::SplitAndMoveRight"
+        }
+    },
+    {
+        "context": "VimControl && !menu && vim_operator != i",
+        "bindings": {
+            ")": "vim::SentenceForward"
+        }
+    },
+    {
+        "context": "VimControl && !menu",
+        "unbind": {
+            ")": "vim::SentenceForward"
         }
     }
 ]
