@@ -87,5 +87,6 @@
     "editor.snippetSuggestions": "none",
     "editor.renderWhitespace": "none",
     "json.schemaDownload.enable": true,
-    "python.defaultInterpreterPath": "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/bin/python3.14"
+    "python.defaultInterpreterPath": "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+    "editor.tabSize": 2
 }
