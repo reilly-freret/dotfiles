@@ -27,6 +27,8 @@ alias ghreview='gh pr comment -b "@greptile review"'
 alias ncduc='ncdu --color dark'
 alias cz='chezmoi'
 alias nv='nvim'
+eval $(thefuck --alias)
+alias fk='fuck'
 
 bindkey '^u' backward-kill-line
 bindkey '^k' kill-line
