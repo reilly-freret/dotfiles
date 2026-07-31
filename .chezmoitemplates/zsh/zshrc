@@ -33,6 +33,14 @@ alias fk='fuck'
 bindkey '^u' backward-kill-line
 bindkey '^k' kill-line
 
+function get_pcap {
+  if [[ -z "$1" ]]; then
+    echo "USAGE: get_pcap <HOST>"
+    return
+  fi
+  ssh root@192.168.8.1 "tcpdump -U -s 0 -i br-lan -w - host $1" > ./client.pcap
+}
+
 function rfind {
   if [[ -z "$1" ]]; then
     echo "no arguments passed; aborting"
