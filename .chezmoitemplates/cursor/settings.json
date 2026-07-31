@@ -90,12 +90,5 @@
     "python.defaultInterpreterPath": "/usr/local/bin/python3",
     "editor.tabSize": 2,
     "window.autoDetectColorScheme": false,
-    "yaml.disableSchemaDetection": [
-        "**/.github/workflows/*.yml",
-        "**/.github/workflows/*.yaml",
-        "**/.gitea/workflows/*.yml",
-        "**/.gitea/workflows/*.yaml",
-        "**/.forgejo/workflows/*.yml",
-        "**/.forgejo/workflows/*.yaml"
-    ]
+    "yaml.disableSchemaDetection": []
 }
