@@ -89,5 +89,13 @@
     "json.schemaDownload.enable": true,
     "python.defaultInterpreterPath": "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
     "editor.tabSize": 2,
-    "window.autoDetectColorScheme": false
+    "window.autoDetectColorScheme": false,
+    "yaml.disableSchemaDetection": [
+        "**/.github/workflows/*.yml",
+        "**/.github/workflows/*.yaml",
+        "**/.gitea/workflows/*.yml",
+        "**/.gitea/workflows/*.yaml",
+        "**/.forgejo/workflows/*.yml",
+        "**/.forgejo/workflows/*.yaml"
+    ]
 }
