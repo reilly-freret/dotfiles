@@ -82,7 +82,7 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter"
+        "editor.defaultFormatter": "charliermarsh.ruff"
     },
     "editor.snippetSuggestions": "none",
     "editor.renderWhitespace": "none",
@@ -97,5 +97,6 @@
         "**/.gitea/workflows/*.yaml",
         "**/.forgejo/workflows/*.yml",
         "**/.forgejo/workflows/*.yaml"
-    ]
+    ],
+    "svelte.enable-ts-plugin": true
 }
