@@ -1,0 +1,58 @@
+#!/bin/bash
+set -euo pipefail
+
+# Links user.js and chrome/userChrome.css into the active Firefox profile.
+#
+# Firefox profile directories carry a random prefix (e.g. txjxifdm.default-release)
+# that differs on every machine, so these cannot be declared as static
+# symlink_ entries the way the rest of this repo does it. The profile is
+# resolved from profiles.ini at apply time instead.
+#
+# Re-runs when the checksums below change:
+#   user.js:       {{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "user.js") | sha256sum }}
+#   userChrome.css: {{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "userChrome.css") | sha256sum }}
+
+source_dir={{ .chezmoi.sourceDir | quote }}
+ff_dir="$HOME/Library/Application Support/Firefox"
+ini="$ff_dir/profiles.ini"
+
+if [[ ! -f "$ini" ]]; then
+  echo "Skipping Firefox profile link: $ini not found (Firefox not run yet?)."
+  exit 0
+fi
+
+# Prefer the profile marked Default= under an [Install...] section, which is
+# the one Firefox actually launches; fall back to Default=1 under [Profile...].
+profile_rel="$(awk -F= '
+  /^\[Install/    { in_install = 1; next }
+  /^\[/           { in_install = 0 }
+  in_install && $1 == "Default" { print $2; exit }
+' "$ini")"
+
+if [[ -z "$profile_rel" ]]; then
+  profile_rel="$(awk -F= '
+    /^\[Profile/ { path = ""; is_default = 0 }
+    $1 == "Path"    { path = $2 }
+    $1 == "Default" && $2 == "1" { is_default = 1 }
+    /^$/ && is_default && path { print path; exit }
+    END { if (is_default && path) print path }
+  ' "$ini")"
+fi
+
+if [[ -z "$profile_rel" ]]; then
+  echo "Skipping Firefox profile link: could not determine default profile from $ini."
+  exit 0
+fi
+
+profile="$ff_dir/$profile_rel"
+
+if [[ ! -d "$profile" ]]; then
+  echo "Skipping Firefox profile link: profile directory $profile does not exist."
+  exit 0
+fi
+
+mkdir -p "$profile/chrome"
+ln -sfn "$source_dir/.chezmoitemplates/firefox/user.js" "$profile/user.js"
+ln -sfn "$source_dir/.chezmoitemplates/firefox/userChrome.css" "$profile/chrome/userChrome.css"
+
+echo "Linked Firefox config into $profile_rel"

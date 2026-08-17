@@ -51,6 +51,38 @@ Notes:
 - These scripts are `run_onchange_*`, so they run when their script/template
   changes (or on first apply), not on every `chezmoi apply`.
 
+## Firefox + Tridactyl
+
+Replaces the qutebrowser setup. Firefox has no single static config file, so
+this splits across three plain-text files:
+
+- `.chezmoitemplates/tridactyl/tridactylrc` -> `~/.tridactylrc`
+  Jump targets ported from qutebrowser quickmarks, as `searchurls`. Tridactyl
+  `quickmark`s are limited to a single character (`go<key>`), so `searchurls`
+  are used instead to keep semantic multi-word names: `o convex-staging`,
+  `t github-ploutos` (new tab), `w axiom` (new window).
+- `.chezmoitemplates/firefox/user.js` -> `<profile>/user.js`
+  Prefs, re-applied by Firefox at every startup. The closest analogue to
+  qutebrowser's `config.py`.
+- `.chezmoitemplates/firefox/userChrome.css` -> `<profile>/chrome/userChrome.css`
+  UI chrome, roughly qutebrowser's `window.hide_decoration`. Requires
+  `toolkit.legacyUserProfileCustomizations.stylesheets`, set in `user.js`.
+
+Note that `~/.tridactylrc` is not read automatically the way `config.py` was.
+Tridactyl stores its config in Firefox's internal database, so on a fresh
+profile you must run `:source` once (or set an `autocmd`) to load it.
+
+The Firefox profile directory carries a machine-specific random prefix
+(`txjxifdm.default-release`), so `user.js` and `userChrome.css` cannot be
+static `symlink_` entries. `scripts/run_onchange_20-link-firefox-profile.sh.tmpl`
+resolves the active profile from `profiles.ini` at apply time and links them.
+
+Bookmarks are deliberately not managed. They live in `places.sqlite`, a binary
+database Firefox rewrites constantly. The only statically-declarable option is
+an enterprise `policies.json`, which must live inside `/Applications/Firefox.app`
+(outside chezmoi's reach, and replaced on every Firefox update) and produces
+read-only bookmarks. The `searchurls` above cover the same need.
+
 ## Chezmoi script behavior
 
 - `run_once_before_*`: executes once before apply workflow.
@@ -62,3 +94,5 @@ Current scripts:
 - `scripts/run_onchange_00-install-brew-items.sh.tmpl`: installs packages from `Nanobrew`.
 - `scripts/run_onchange_10-generate-just-completions.sh.tmpl`: generates `just` completion.
 - `scripts/run_onchange_11-generate-pnpm-completions.sh.tmpl`: generates `pnpm` completion.
+- `scripts/run_onchange_20-link-firefox-profile.sh.tmpl`: links `user.js` and
+  `userChrome.css` into the active Firefox profile.

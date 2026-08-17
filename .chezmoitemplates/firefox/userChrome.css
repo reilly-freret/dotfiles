@@ -1,0 +1,22 @@
+/* userChrome.css -- managed by chezmoi
+ *
+ * Requires toolkit.legacyUserProfileCustomizations.stylesheets = true,
+ * which is set in user.js.
+ *
+ * Rough analogue of qutebrowser's window.hide_decoration: reclaim vertical
+ * space now that Tridactyl handles navigation and you rarely need the
+ * mouse-driven chrome.
+ */
+
+/* Hide the tab bar entirely -- Tridactyl's `b` buffer switcher replaces it.
+ * Comment this block out if you'd rather keep tabs visible. */
+/*
+#TabsToolbar {
+  visibility: collapse !important;
+}
+*/
+
+/* Reclaim the titlebar row. */
+#titlebar {
+  appearance: none !important;
+}

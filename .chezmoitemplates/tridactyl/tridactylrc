@@ -1,0 +1,55 @@
+" ~/.tridactylrc  --  managed by chezmoi
+"
+" Ported from qutebrowser quickmarks. All jump targets are `searchurls`
+" rather than Tridactyl `quickmark`s: quickmarks are limited to a single
+" character (go<key>), whereas searchurls keep semantic multi-word names.
+"
+" Usage:  o <name>   current tab
+"         t <name>   new tab
+"         w <name>   new window
+"
+" None of these URLs contain a %s placeholder, so a bare `o <name>` appends
+" nothing and navigates to the URL exactly as written.
+
+" ---------------------------------------------------------------- work
+set searchurls.github-ploutos https://github.com/withcompany/ploutos
+set searchurls.chronos-github https://github.com/withcompany/chronos
+set searchurls.tycho https://github.com/withcompany/tycho
+set searchurls.ploutos-vercel https://vercel.com/withco/ploutos
+set searchurls.convex-cloud-dev https://dashboard.convex.dev/t/withco/ploutos/dependable-vole-875/data?table=areasOfInterest
+set searchurls.convex-staging https://dashboard.convex.dev/t/withco/ploutos-staging/colorless-cheetah-818/data?table=areasOfInterest
+set searchurls.clerk-dashboard https://dashboard.clerk.com/apps/app_3BtbXLeDxtNcgFCeLF9C25hXbZm/instances/ins_3BtbXFzb3k0xUE6ypskZd0ojKfF?users_hiddenColumns=username,phone_number
+set searchurls.cloudflare-dash https://dash.cloudflare.com/1bb9e1a84399869a9da1ea657966c690/home/overview
+set searchurls.gcc https://console.cloud.google.com/welcome?pli=1&project=withco-production
+set searchurls.axiom https://app.axiom.co/withco-dboq/stream
+set searchurls.ramp https://app.ramp.com/home
+
+" ------------------------------------------------------------- homelab
+set searchurls.netdata http://100.109.17.69:19999/
+set searchurls.beszel http://burrow.kite-lydian.ts.net:8090/
+set searchurls.jarvissohn http://burrow.kite-lydian.ts.net:3001/
+set searchurls.rss http://burrow.kite-lydian.ts.net:8083/i/
+
+" ----------------------------------------------------------------- ref
+set searchurls.docs-convex https://docs.convex.dev/home
+set searchurls.shadcn https://ui.shadcn.com/
+set searchurls.mapbox https://docs.mapbox.com/playground/search-box/suggest-retrieve/
+set searchurls.brew https://brew.sh/
+
+" ---------------------------------------------------------------- self
+set searchurls.gmail https://mail.google.com/mail/u/0/#inbox
+set searchurls.calendar https://calendar.google.com/calendar/u/0/r
+set searchurls.maps https://www.google.com/maps
+set searchurls.amazon https://www.amazon.com/
+set searchurls.chatgpt https://chatgpt.com/
+set searchurls.claude https://claude.ai/new
+
+" ---------------------------------------------------------------- read
+set searchurls.xkcd https://xkcd.com/
+set searchurls.smbc http://smbc-comics.com/
+set searchurls.qwantz https://qwantz.com/
+set searchurls.bluesky https://bsky.app/
+
+" -------------------------------------------------------------- status
+set searchurls.gh-status https://www.githubstatus.com/
+set searchurls.downdetector https://downdetector.com/
