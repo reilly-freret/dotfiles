@@ -1,0 +1,42 @@
+#!/bin/bash
+set -euo pipefail
+
+# Installs the Tridactyl native messenger.
+#
+# Tridactyl is a WebExtension and cannot read the filesystem on its own, so
+# without this it cannot read ~/.tridactylrc at all -- meaning no searchurls,
+# and `o <alias>` silently falls through to a web search.
+#
+# With the native messenger present, Tridactyl sources ~/.tridactylrc
+# automatically at startup. No `:source` needed; that is only required when
+# native is missing or when reloading the file mid-session.
+#
+# This installs the same compiled universal binary that Tridactyl's own
+# `:installnative` fetches (tridactyl/native_messenger releases). Notably it
+# has no Python dependency.
+#
+# run_once_ rather than run_onchange_: this is one-time machine setup, and the
+# messenger self-updates via `:updatenative`.
+
+manifest="$HOME/Library/Application Support/Mozilla/NativeMessagingHosts/tridactyl.json"
+binary="$HOME/.local/share/tridactyl/native_main"
+
+if [[ -f "$manifest" && -x "$binary" ]]; then
+  echo "Tridactyl native messenger already installed."
+  exit 0
+fi
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "Skipping Tridactyl native messenger: curl not available." >&2
+  exit 0
+fi
+
+echo "Installing Tridactyl native messenger..."
+
+if curl -fsSL https://raw.githubusercontent.com/tridactyl/native_messenger/master/installers/install.sh | sh; then
+  echo "Tridactyl native messenger installed."
+  echo "Check with ':native' in Firefox; ':findrc' shows which rc file is loaded."
+else
+  echo "Tridactyl native messenger install failed." >&2
+  echo "Fall back to running ':installnative' inside Firefox." >&2
+fi

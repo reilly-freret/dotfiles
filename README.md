@@ -68,20 +68,59 @@ this splits across three plain-text files:
   UI chrome, roughly qutebrowser's `window.hide_decoration`. Requires
   `toolkit.legacyUserProfileCustomizations.stylesheets`, set in `user.js`.
 
-Note that `~/.tridactylrc` is not read automatically the way `config.py` was.
-Tridactyl stores its config in Firefox's internal database, so on a fresh
-profile you must run `:source` once (or set an `autocmd`) to load it.
+- `.chezmoitemplates/firefox/policies.json` -> inside `Firefox.app` (see below)
+  Enterprise policy: auto-installs extensions, disables telemetry/Pocket/onboarding.
 
-The Firefox profile directory carries a machine-specific random prefix
-(`txjxifdm.default-release`), so `user.js` and `userChrome.css` cannot be
-static `symlink_` entries. `scripts/run_onchange_20-link-firefox-profile.sh.tmpl`
-resolves the active profile from `profiles.ini` at apply time and links them.
+`~/.tridactylrc` is sourced automatically at startup, but *only* when the
+Tridactyl native messenger is installed -- Tridactyl is a WebExtension and
+otherwise cannot read the filesystem. Without native, `o <alias>` silently
+falls through to a web search. `:findrc` shows which rc file was picked up.
 
-Bookmarks are deliberately not managed. They live in `places.sqlite`, a binary
-database Firefox rewrites constantly. The only statically-declarable option is
-an enterprise `policies.json`, which must live inside `/Applications/Firefox.app`
-(outside chezmoi's reach, and replaced on every Firefox update) and produces
-read-only bookmarks. The `searchurls` above cover the same need.
+### Artifacts that live outside this repo
+
+Two of the four files cannot be normal chezmoi entries, because chezmoi manages
+`$HOME` and these live elsewhere. Both are deployed by scripts, with the
+versioned copy in this repo remaining the source of truth. Edit the file here,
+run `chezmoi apply`, never edit the deployed copy.
+
+| Source of truth (versioned)                    | Deployed to                                        | By |
+|------------------------------------------------|----------------------------------------------------|----|
+| `.chezmoitemplates/firefox/user.js`            | `<profile>/user.js`                                 | `run_onchange_20` |
+| `.chezmoitemplates/firefox/userChrome.css`     | `<profile>/chrome/userChrome.css`                   | `run_onchange_20` |
+| `.chezmoitemplates/firefox/policies.json`      | `Firefox.app/Contents/Resources/distribution/`      | `run_onchange_21` |
+
+**Profile files** (`user.js`, `userChrome.css`) are *symlinked*, so edits take
+effect on the next Firefox launch with no re-apply. The profile directory has a
+machine-specific random prefix (`txjxifdm.default-release`), so the script
+resolves it from `profiles.ini` rather than hardcoding it.
+
+**`policies.json`** is *copied*, not symlinked -- symlinking into a signed
+`.app` bundle is fragile. Two consequences:
+
+- Editing the source requires `chezmoi apply` to redeploy.
+- **A Firefox update replaces the `.app` bundle and deletes the file.** Already
+  installed extensions survive (they live in the profile), but policy stops
+  being enforced. Re-run `chezmoi apply` after updating Firefox.
+
+If `/Applications/Firefox.app` is not writable, the script prints the `sudo`
+command to run instead of failing the whole apply.
+
+Verify policy is live at `about:policies`; verify extensions at `about:addons`.
+
+Extensions use `normal_installed`, so they auto-install on a new machine but
+remain removable. Switch to `force_installed` in `policies.json` to lock them.
+
+### Bookmarks
+
+Deliberately not managed. They live in `places.sqlite`, a binary database
+Firefox rewrites constantly. `policies.json` can declare them, but they become
+read-only and re-asserted at every launch. The `searchurls` above cover the same
+need with better ergonomics.
+
+Settings changed through Firefox's UI (`Cmd+,`) are written to `prefs.js` and do
+**not** flow back to this repo. Prefs listed in `user.js` are re-applied at every
+startup, so UI changes to those revert; prefs not listed drift silently per
+machine. Treat `user.js` as the source of truth.
 
 ## Chezmoi script behavior
 
@@ -96,3 +135,7 @@ Current scripts:
 - `scripts/run_onchange_11-generate-pnpm-completions.sh.tmpl`: generates `pnpm` completion.
 - `scripts/run_onchange_20-link-firefox-profile.sh.tmpl`: links `user.js` and
   `userChrome.css` into the active Firefox profile.
+- `scripts/run_onchange_21-install-firefox-policies.sh.tmpl`: copies `policies.json`
+  into the Firefox app bundle.
+- `scripts/run_once_22-install-tridactyl-native.sh.tmpl`: installs the Tridactyl
+  native messenger (required for `~/.tridactylrc` to be read at all).

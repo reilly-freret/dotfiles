@@ -1,0 +1,61 @@
+#!/bin/bash
+set -euo pipefail
+
+# Installs policies.json into the Firefox application bundle.
+#
+# ---------------------------------------------------------------------------
+# WHY THIS LIVES OUTSIDE $HOME
+# ---------------------------------------------------------------------------
+# Firefox only reads enterprise policy from inside its own .app bundle:
+#
+#   /Applications/Firefox.app/Contents/Resources/distribution/policies.json
+#
+# chezmoi manages $HOME, so this file cannot be a normal managed entry. The
+# source of truth is versioned at .chezmoitemplates/firefox/policies.json and
+# copied into place here.
+#
+# CONSEQUENCE: a Firefox update replaces the .app bundle and DELETES this file.
+# Extensions stay installed (they live in the profile), but policy stops being
+# enforced. Re-run `chezmoi apply` after updating Firefox.
+#
+# A copy is used rather than a symlink: symlinking into a signed .app bundle
+# is fragile, and the file is small enough that copying costs nothing.
+#
+# Re-runs when the policy file changes:
+#   policies.json: {{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "policies.json") | sha256sum }}
+
+source_file={{ (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "policies.json") | quote }}
+app="/Applications/Firefox.app"
+dist_dir="$app/Contents/Resources/distribution"
+target="$dist_dir/policies.json"
+
+if [[ ! -d "$app" ]]; then
+  echo "Skipping Firefox policies: $app not found."
+  exit 0
+fi
+
+if [[ ! -f "$source_file" ]]; then
+  echo "Skipping Firefox policies: source $source_file missing." >&2
+  exit 0
+fi
+
+# Bail out early rather than half-writing if the bundle isn't writable.
+if ! mkdir -p "$dist_dir" 2>/dev/null; then
+  echo "Could not create $dist_dir (permission denied)." >&2
+  echo "Run: sudo mkdir -p '$dist_dir' && sudo chown \"$USER\" '$dist_dir'" >&2
+  exit 0
+fi
+
+if cmp -s "$source_file" "$target" 2>/dev/null; then
+  echo "Firefox policies already up to date."
+  exit 0
+fi
+
+if cp "$source_file" "$target" 2>/dev/null; then
+  echo "Installed Firefox policies.json -> $target"
+  echo "Verify at about:policies (restart Firefox first)."
+else
+  echo "Failed to write $target (permission denied)." >&2
+  echo "Run: sudo cp '$source_file' '$target'" >&2
+  exit 0
+fi
