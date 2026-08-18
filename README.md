@@ -53,8 +53,9 @@ Notes:
 
 ## Firefox + Tridactyl
 
-Replaces the qutebrowser setup. Firefox has no single static config file, so
-this splits across three plain-text files:
+Replaces the qutebrowser setup, whose files have been removed from this repo.
+Firefox has no single static config file, so this splits across four
+plain-text files:
 
 - `.chezmoitemplates/tridactyl/tridactylrc` -> `~/.tridactylrc`
   Jump targets ported from qutebrowser quickmarks, as `searchurls`. Tridactyl
@@ -67,9 +68,12 @@ this splits across three plain-text files:
 - `.chezmoitemplates/firefox/userChrome.css` -> `<profile>/chrome/userChrome.css`
   UI chrome, roughly qutebrowser's `window.hide_decoration`. Requires
   `toolkit.legacyUserProfileCustomizations.stylesheets`, set in `user.js`.
+  Deliberately minimal now that tabs are handled natively.
 
 - `.chezmoitemplates/firefox/policies.json` -> inside `Firefox.app` (see below)
-  Enterprise policy: auto-installs extensions, disables telemetry/Pocket/onboarding.
+  Enterprise policy: auto-installs extensions, disables telemetry/Pocket/
+  onboarding, kills the built-in password manager, and turns on native
+  vertical tabs.
 
 `~/.tridactylrc` is sourced automatically at startup, but *only* when the
 Tridactyl native messenger is installed -- Tridactyl is a WebExtension and
@@ -78,8 +82,8 @@ falls through to a web search. `:findrc` shows which rc file was picked up.
 
 ### Artifacts that live outside this repo
 
-Two of the four files cannot be normal chezmoi entries, because chezmoi manages
-`$HOME` and these live elsewhere. Both are deployed by scripts, with the
+Some of these cannot be normal chezmoi entries, because chezmoi manages
+`$HOME` and they live elsewhere. They are deployed by scripts, with the
 versioned copy in this repo remaining the source of truth. Edit the file here,
 run `chezmoi apply`, never edit the deployed copy.
 
@@ -107,8 +111,120 @@ command to run instead of failing the whole apply.
 
 Verify policy is live at `about:policies`; verify extensions at `about:addons`.
 
-Extensions use `normal_installed`, so they auto-install on a new machine but
-remain removable. Switch to `force_installed` in `policies.json` to lock them.
+Extensions use `force_installed`: they auto-install on a new machine with **no
+permission prompt**, and cannot be removed or disabled from `about:addons`.
+(`normal_installed` also skips the prompt -- policy-installed extensions go
+through `AddonManager` directly rather than the install doorhanger -- the only
+difference is that it still allows disabling them.) To take one back under
+manual control, change its mode to `allowed` and re-apply.
+
+Currently declared: uBlock Origin, Tridactyl, Bitwarden.
+
+Extension IDs are the addon's internal GUID, not its AMO slug, and a wrong ID
+fails silently. Look one up with:
+
+```sh
+curl -fsSL https://addons.mozilla.org/api/v5/addons/addon/<slug>/ | jq -r .guid
+```
+
+### Setting up a new machine
+
+Firefox itself is installed by hand -- it's commented out in `Nanobrew`
+because casks are unreliable there. Everything after that is automated:
+
+```sh
+# install Firefox manually, then:
+git pull && chezmoi apply
+```
+
+`chezmoi apply` will, in order: create a Firefox profile if none exists
+(headlessly, via `-CreateProfile` -- no need to launch Firefox first), symlink
+`user.js` and `userChrome.css` into it, copy `policies.json` into the app
+bundle, and install the Tridactyl native messenger.
+
+Then launch Firefox once. Extensions install on that first launch, not at
+apply time, so `about:addons` will be empty until then.
+
+Two things are inherently manual, being per-profile UI state rather than
+config files:
+
+- Sign in to Bitwarden.
+
+(Vertical tabs come up automatically -- they are prefs, not UI state.)
+
+### New tab vs new window (Tridactyl)
+
+**New tabs work.** Tridactyl overrides `about:newtab` via `chrome_url_overrides`
+in its manifest, and `.tridactylrc` sets `newtab about:blank` so a new tab is
+instant and empty. Tridactyl still binds there -- it special-cases this exact
+setup (tridactyl#829), and a tab opened from an existing one inherits a
+principal so the content script is injected.
+
+**New windows do not work, and cannot be made to.** This was investigated
+properly rather than patched around:
+
+Firefox loads a new window's first tab from `browser.startup.homepage` itself,
+before any extension can claim it. Every reachable target is a page Tridactyl
+cannot run on:
+
+| Homepage value | Why it fails |
+|---|---|
+| `about:home`, `about:newtab` | privileged pages; Firefox refuses content scripts. `BROWSER_NEW_TAB_URL` resolves the extension override only on the new-*tab* path, not for the homepage -- there is no channel-level redirect for `about:newtab` |
+| `about:blank` | top-level, so it has a null principal. `match_about_blank` only covers `about:blank` that inherits a principal from an opener |
+| `moz-extension://<uuid>/static/newtab.html` | would work -- that page loads `content.js` from its own `<script>` tag -- but the UUID is generated per profile. `UUIDMap.get()` returns any existing entry, so it cannot be pinned on a profile that already has one, and writing the whole map would clobber the other extensions' UUIDs |
+
+Upstream treats this as a WebExtension limitation
+([tridactyl#775](https://github.com/tridactyl/tridactyl/issues/775),
+labelled `webext-limitation`; the related startup race
+[bug 1518863](https://bugzilla.mozilla.org/show_bug.cgi?id=1518863) was fixed
+in Firefox 67 and is *not* this).
+
+The homepage is therefore just `about:blank`: instant and empty rather than
+Firefox's newtab page with its search box and content. On a new window, press
+`Ctrl-,` or navigate somewhere to get Tridactyl back. If you want a new window
+that *does* have Tridactyl, open it from an existing one with `:winopen`.
+
+### Passwords
+
+Bitwarden is the only password manager in play. Firefox's built-in one is
+turned off by policy rather than by preference, so it cannot drift:
+
+- `OfferToSaveLogins: false` -- never prompts to save a password.
+- `PasswordManagerEnabled: false` -- removes the built-in manager.
+- `signon.rememberSignons` / `signon.autofillForms` / `signon.generation.enabled`
+  are also set `locked`, which greys them out in Settings.
+- `DisableFormHistory`, `AutofillAddressEnabled`, `AutofillCreditCardEnabled`
+  are off so Firefox stops competing with Bitwarden on form fills.
+
+There is no "default password manager" switch in Firefox -- disabling the
+built-in one *is* the mechanism.
+
+### Tabs (native vertical tabs)
+
+Tabs are Firefox's **native vertical tabs**, not an extension. Tree Style Tab
+was used briefly and then dropped: Firefox 154 does this natively, and the
+classic sidebar TST depends on is on Mozilla's deprecation path (see the
+`old-sidebar-is-going-away-soon` rollout in `about:studies`).
+
+Four prefs, all set in `policies.json` and mirrored in `user.js`:
+
+| Pref | Value | Why |
+|------|-------|-----|
+| `sidebar.revamp`         | `true`        | vertical tabs live in the revamped sidebar and do not render without it |
+| `sidebar.verticalTabs`   | `true`        | tabs in the sidebar instead of across the top |
+| `sidebar.visibility`     | `always-show` | otherwise the launcher hides itself on close |
+| `sidebar.position_start` | `false`       | sidebar on the **right** |
+
+The first three are `locked`, which is what makes them stick: Firefox ships a
+Nimbus rollout that controls the sidebar, and a locked pref reads from the
+default branch and outranks both the experiment and any stale user value.
+
+**Do not add `#TabsToolbar { visibility: collapse }` to `userChrome.css`.**
+With vertical tabs on, Firefox *reparents the real tab strip* into the
+sidebar's vertical toolbar (`SidebarController.toggleTabstrip`) rather than
+drawing a second one -- collapsing `#TabsToolbar` therefore hides the actual
+tabs and leaves no tab UI at all. That combination is what produced the
+"tabs are simply not there" symptom.
 
 ### Bookmarks
 
@@ -133,8 +249,8 @@ Current scripts:
 - `scripts/run_onchange_00-install-brew-items.sh.tmpl`: installs packages from `Nanobrew`.
 - `scripts/run_onchange_10-generate-just-completions.sh.tmpl`: generates `just` completion.
 - `scripts/run_onchange_11-generate-pnpm-completions.sh.tmpl`: generates `pnpm` completion.
-- `scripts/run_onchange_20-link-firefox-profile.sh.tmpl`: links `user.js` and
-  `userChrome.css` into the active Firefox profile.
+- `scripts/run_onchange_20-link-firefox-profile.sh.tmpl`: creates a Firefox
+  profile if none exists, then links `user.js` and `userChrome.css` into it.
 - `scripts/run_onchange_21-install-firefox-policies.sh.tmpl`: copies `policies.json`
   into the Firefox app bundle.
 - `scripts/run_once_22-install-tridactyl-native.sh.tmpl`: installs the Tridactyl

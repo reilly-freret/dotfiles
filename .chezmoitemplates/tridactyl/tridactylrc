@@ -11,33 +11,43 @@
 " None of these URLs contain a %s placeholder, so a bare `o <name>` appends
 " nothing and navigates to the URL exactly as written.
 
+" ------------------------------------------------------- tabs / new tab
+" New tab page. Tridactyl overrides about:newtab via chrome_url_overrides,
+" and `newtab` redirects that override to a URL of your choosing.
+" about:blank gives an instant, empty new tab; Tridactyl's binds still work
+" because Tridactyl special-cases about:blank (its content script declares
+" match_about_blank, and a tab opened from an existing one inherits a
+" principal, so the script is injected).
+"
+" NOTE this does NOT apply to new *windows* -- see the README. A new window's
+" first tab is loaded by Firefox from browser.startup.homepage before any
+" extension can claim it, and no Tridactyl setting reaches it.
+set newtab about:blank
+
+" Tab placement. Tabs are a flat vertical list (Firefox native vertical
+" tabs), so "next" is the intuitive behaviour: a tab you open lands directly
+" below the one you opened it from rather than at the bottom of a long list.
+set tabopenpos next
+set relatedopenpos related
+
 " ---------------------------------------------------------------- work
-set searchurls.github-ploutos https://github.com/withcompany/ploutos
-set searchurls.chronos-github https://github.com/withcompany/chronos
+set searchurls.chronos https://github.com/withcompany/chronos
 set searchurls.tycho https://github.com/withcompany/tycho
-set searchurls.ploutos-vercel https://vercel.com/withco/ploutos
-set searchurls.convex-cloud-dev https://dashboard.convex.dev/t/withco/ploutos/dependable-vole-875/data?table=areasOfInterest
-set searchurls.convex-staging https://dashboard.convex.dev/t/withco/ploutos-staging/colorless-cheetah-818/data?table=areasOfInterest
-set searchurls.clerk-dashboard https://dashboard.clerk.com/apps/app_3BtbXLeDxtNcgFCeLF9C25hXbZm/instances/ins_3BtbXFzb3k0xUE6ypskZd0ojKfF?users_hiddenColumns=username,phone_number
+set searchurls.clerk-dash https://dashboard.clerk.com/apps/app_3BtbXLeDxtNcgFCeLF9C25hXbZm/instances/ins_3BtbXFzb3k0xUE6ypskZd0ojKfF?users_hiddenColumns=username,phone_number
 set searchurls.cloudflare-dash https://dash.cloudflare.com/1bb9e1a84399869a9da1ea657966c690/home/overview
 set searchurls.gcc https://console.cloud.google.com/welcome?pli=1&project=withco-production
 set searchurls.axiom https://app.axiom.co/withco-dboq/stream
 set searchurls.ramp https://app.ramp.com/home
 
 " ------------------------------------------------------------- homelab
-set searchurls.netdata http://100.109.17.69:19999/
 set searchurls.beszel http://burrow.kite-lydian.ts.net:8090/
-set searchurls.jarvissohn http://burrow.kite-lydian.ts.net:3001/
 set searchurls.rss http://burrow.kite-lydian.ts.net:8083/i/
+set searchurls.budget https://budget.freret.dev/
 
 " ----------------------------------------------------------------- ref
-set searchurls.docs-convex https://docs.convex.dev/home
-set searchurls.shadcn https://ui.shadcn.com/
-set searchurls.mapbox https://docs.mapbox.com/playground/search-box/suggest-retrieve/
 set searchurls.brew https://brew.sh/
 
 " ---------------------------------------------------------------- self
-set searchurls.gmail https://mail.google.com/mail/u/0/#inbox
 set searchurls.calendar https://calendar.google.com/calendar/u/0/r
 set searchurls.maps https://www.google.com/maps
 set searchurls.amazon https://www.amazon.com/
@@ -48,8 +58,12 @@ set searchurls.claude https://claude.ai/new
 set searchurls.xkcd https://xkcd.com/
 set searchurls.smbc http://smbc-comics.com/
 set searchurls.qwantz https://qwantz.com/
-set searchurls.bluesky https://bsky.app/
+set searchurls.bsky https://bsky.app/
 
 " -------------------------------------------------------------- status
 set searchurls.gh-status https://www.githubstatus.com/
 set searchurls.downdetector https://downdetector.com/
+
+bind J tabnext
+bind K tabprev
+bind gT hint -c [title] -F (target => { const id = 'tridactyl-tooltip'; let el = document.getElementById(id); if(el) el.remove(); const tip = document.createElement('div'); tip.id = id; tip.textContent = target.getAttribute('title'); Object.assign(tip.style, { position: 'absolute', background: '#333', color: '#fff', padding: '6px 10px', borderRadius: '4px', zIndex: '99999', fontSize: '14px', pointerEvents: 'none', boxShadow: '0 2px 5px rgba(0,0,0,0.3)' }); document.body.appendChild(tip); const rect = target.getBoundingClientRect(); tip.style.top = `${rect.bottom + window.scrollY + 5}px`; tip.style.left = `${rect.left + window.scrollX}px`; document.addEventListener('click', () => tip.remove(), {once: true}); })

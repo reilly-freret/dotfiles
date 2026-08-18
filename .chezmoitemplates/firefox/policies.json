@@ -2,12 +2,16 @@
   "policies": {
     "ExtensionSettings": {
       "uBlock0@raymondhill.net": {
-        "installation_mode": "normal_installed",
+        "installation_mode": "force_installed",
         "install_url": "https://addons.mozilla.org/firefox/downloads/latest/ublock-origin/latest.xpi"
       },
       "tridactyl.vim@cmcaine.co.uk": {
-        "installation_mode": "normal_installed",
+        "installation_mode": "force_installed",
         "install_url": "https://addons.mozilla.org/firefox/downloads/latest/tridactyl-vim/latest.xpi"
+      },
+      "{446900e4-71c2-419f-a6a7-df9c091e268b}": {
+        "installation_mode": "force_installed",
+        "install_url": "https://addons.mozilla.org/firefox/downloads/latest/bitwarden-password-manager/latest.xpi"
       }
     },
     "ExtensionUpdate": true,
@@ -29,6 +33,58 @@
       "FeatureRecommendations": false,
       "SkipOnboarding": true,
       "MoreFromMozilla": false
+    },
+    "OfferToSaveLogins": false,
+    "PasswordManagerEnabled": false,
+    "DisableFormHistory": true,
+    "AutofillAddressEnabled": false,
+    "AutofillCreditCardEnabled": false,
+    "Homepage": {
+      "URL": "about:blank",
+      "StartPage": "homepage",
+      "Locked": false
+    },
+    "Preferences": {
+      "sidebar.position_start": {
+        "Value": false,
+        "Status": "default"
+      },
+      "sidebar.revamp": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "signon.rememberSignons": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "signon.autofillForms": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "signon.generation.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "signon.management.page.breach-alerts.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.startup.page": {
+        "Value": 1,
+        "Status": "default"
+      },
+      "browser.startup.homepage": {
+        "Value": "about:blank",
+        "Status": "default"
+      },
+      "sidebar.verticalTabs": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "sidebar.visibility": {
+        "Value": "always-show",
+        "Status": "locked"
+      }
     }
   }
 }

@@ -15,10 +15,28 @@ set -euo pipefail
 source_dir={{ .chezmoi.sourceDir | quote }}
 ff_dir="$HOME/Library/Application Support/Firefox"
 ini="$ff_dir/profiles.ini"
+app="/Applications/Firefox.app"
+firefox_bin="$app/Contents/MacOS/firefox"
 
+# On a fresh machine Firefox has been installed but never launched, so
+# profiles.ini does not exist yet and there is nothing to link into. Rather
+# than making the user launch Firefox by hand before the first apply,
+# bootstrap a profile headlessly. -CreateProfile registers it in profiles.ini
+# (unlike --profile, which makes a detached one Firefox won't select).
 if [[ ! -f "$ini" ]]; then
-  echo "Skipping Firefox profile link: $ini not found (Firefox not run yet?)."
-  exit 0
+  if [[ ! -x "$firefox_bin" ]]; then
+    echo "Skipping Firefox profile link: $app not found."
+    exit 0
+  fi
+
+  echo "No Firefox profile yet; creating one..."
+  "$firefox_bin" -CreateProfile default-release >/dev/null 2>&1 || true
+
+  if [[ ! -f "$ini" ]]; then
+    echo "Could not create a Firefox profile automatically." >&2
+    echo "Launch Firefox once, then re-run: chezmoi apply" >&2
+    exit 0
+  fi
 fi
 
 # Prefer the profile marked Default= under an [Install...] section, which is
@@ -34,8 +52,7 @@ if [[ -z "$profile_rel" ]]; then
     /^\[Profile/ { path = ""; is_default = 0 }
     $1 == "Path"    { path = $2 }
     $1 == "Default" && $2 == "1" { is_default = 1 }
-    /^$/ && is_default && path { print path; exit }
-    END { if (is_default && path) print path }
+    is_default && path { print path; exit }
   ' "$ini")"
 fi
 

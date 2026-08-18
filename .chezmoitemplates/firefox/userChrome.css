@@ -3,18 +3,15 @@
  * Requires toolkit.legacyUserProfileCustomizations.stylesheets = true,
  * which is set in user.js.
  *
- * Rough analogue of qutebrowser's window.hide_decoration: reclaim vertical
- * space now that Tridactyl handles navigation and you rarely need the
- * mouse-driven chrome.
+ * Deliberately minimal. Tabs are handled by Firefox's NATIVE vertical tabs
+ * (sidebar.verticalTabs), not by an extension and not by CSS, so there is no
+ * tab-bar hackery here.
+ *
+ * NOTE: do NOT add `#TabsToolbar { visibility: collapse }`. With vertical tabs
+ * enabled Firefox *reparents the real tab strip* into the sidebar's vertical
+ * toolbar (SidebarController.toggleTabstrip) rather than drawing a second one,
+ * so collapsing #TabsToolbar hides the actual tabs and leaves no tab UI at all.
  */
-
-/* Hide the tab bar entirely -- Tridactyl's `b` buffer switcher replaces it.
- * Comment this block out if you'd rather keep tabs visible. */
-/*
-#TabsToolbar {
-  visibility: collapse !important;
-}
-*/
 
 /* Reclaim the titlebar row. */
 #titlebar {
