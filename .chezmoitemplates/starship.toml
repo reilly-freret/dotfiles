@@ -37,7 +37,7 @@ stashed = "≡"
 
 [git_state]
 format = '\([$state( $progress_current/$progress_total)]($style)\) '
-style = "bright-black"
+style = "white"
 
 [cmd_duration]
 format = "[$duration]($style) "
@@ -45,6 +45,6 @@ style = "yellow"
 
 [python]
 format = "[$virtualenv]($style) "
-style = "bright-black"
+style = "pink"
 detect_extensions = []
 detect_files = []
