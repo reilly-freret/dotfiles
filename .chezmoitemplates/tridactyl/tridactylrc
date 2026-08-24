@@ -67,3 +67,9 @@ set searchurls.downdetector https://downdetector.com/
 bind J tabnext
 bind K tabprev
 bind gT hint -c [title] -F (target => { const id = 'tridactyl-tooltip'; let el = document.getElementById(id); if(el) el.remove(); const tip = document.createElement('div'); tip.id = id; tip.textContent = target.getAttribute('title'); Object.assign(tip.style, { position: 'absolute', background: '#333', color: '#fff', padding: '6px 10px', borderRadius: '4px', zIndex: '99999', fontSize: '14px', pointerEvents: 'none', boxShadow: '0 2px 5px rgba(0,0,0,0.3)' }); document.body.appendChild(tip); const rect = target.getBoundingClientRect(); tip.style.top = `${rect.bottom + window.scrollY + 5}px`; tip.style.left = `${rect.left + window.scrollX}px`; document.addEventListener('click', () => tip.remove(), {once: true}); })
+
+bind / fillcmdline find
+bind ? fillcmdline find -?
+bind n findnext 1
+bind N findnext -1
+
