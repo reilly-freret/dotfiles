@@ -40,9 +40,9 @@ Current shell stack:
 
 Completions for tools without OMZ plugins are generated into `~/.zfunc`:
 
-- `scripts/run_onchange_10-generate-just-completions.sh.tmpl` writes `~/.zfunc/_just`
+- `.chezmoiscripts/run_onchange_10-generate-just-completions.sh.tmpl` writes `~/.zfunc/_just`
   using `mise x just -- just --completions zsh`.
-- `scripts/run_onchange_11-generate-pnpm-completions.sh.tmpl` writes `~/.zfunc/_pnpm`
+- `.chezmoiscripts/run_onchange_11-generate-pnpm-completions.sh.tmpl` writes `~/.zfunc/_pnpm`
   using `mise x pnpm -- pnpm completion zsh`.
 
 Notes:
@@ -245,13 +245,13 @@ machine. Treat `user.js` as the source of truth.
 
 Current scripts:
 
-- `scripts/run_once_before_00-install-homebrew.sh.tmpl`: installs NanoBrew.
-- `scripts/run_onchange_00-install-brew-items.sh.tmpl`: installs packages from `Nanobrew`.
-- `scripts/run_onchange_10-generate-just-completions.sh.tmpl`: generates `just` completion.
-- `scripts/run_onchange_11-generate-pnpm-completions.sh.tmpl`: generates `pnpm` completion.
-- `scripts/run_onchange_20-link-firefox-profile.sh.tmpl`: creates a Firefox
+- `.chezmoiscripts/run_once_before_00-install-homebrew.sh.tmpl`: installs NanoBrew.
+- `.chezmoiscripts/run_onchange_00-install-brew-items.sh.tmpl`: installs packages from `Nanobrew`.
+- `.chezmoiscripts/run_onchange_10-generate-just-completions.sh.tmpl`: generates `just` completion.
+- `.chezmoiscripts/run_onchange_11-generate-pnpm-completions.sh.tmpl`: generates `pnpm` completion.
+- `.chezmoiscripts/run_onchange_20-link-firefox-profile.sh.tmpl`: creates a Firefox
   profile if none exists, then links `user.js` and `userChrome.css` into it.
-- `scripts/run_onchange_21-install-firefox-policies.sh.tmpl`: copies `policies.json`
+- `.chezmoiscripts/run_onchange_21-install-firefox-policies.sh.tmpl`: copies `policies.json`
   into the Firefox app bundle.
-- `scripts/run_once_22-install-tridactyl-native.sh.tmpl`: installs the Tridactyl
+- `.chezmoiscripts/run_once_22-install-tridactyl-native.sh.tmpl`: installs the Tridactyl
   native messenger (required for `~/.tridactylrc` to be read at all).
