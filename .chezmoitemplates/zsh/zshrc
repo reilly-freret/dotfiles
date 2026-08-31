@@ -59,6 +59,42 @@ utcnow() {
   date -u +"%Y-%m-%dT%H:%M:%S"
 }
 
+# recursively check pwd for repos with "dirty" git status 
+# arg1 specifies max search depth
+check_git_repos() {
+    local maxdepth="${1:-3}"
+    local gitdir repo repo_status upstream ahead behind
+
+    find . -maxdepth "$maxdepth" -type d -name ".git" 2>/dev/null | while read -r gitdir; do
+        repo=$(dirname "$gitdir")
+
+        git -C "$repo" rev-parse --is-inside-work-tree &>/dev/null || continue
+
+        repo_status=""
+
+        if [[ -n "$(git -C "$repo" status --porcelain 2>/dev/null)" ]]; then
+            repo_status="uncommitted changes"
+        fi
+
+        upstream=$(git -C "$repo" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)
+
+        if [[ -n "$upstream" ]]; then
+            ahead=$(git -C "$repo" rev-list --count '@{u}..HEAD' 2>/dev/null)
+            behind=$(git -C "$repo" rev-list --count 'HEAD..@{u}' 2>/dev/null)
+
+            [[ "$ahead" -gt 0 ]] && repo_status="${repo_status:+$repo_status, }$ahead unpushed commit(s)"
+            [[ "$behind" -gt 0 ]] && repo_status="${repo_status:+$repo_status, }$behind commit(s) behind remote"
+        else
+            repo_status="${repo_status:+$repo_status, }no upstream set"
+        fi
+
+        if [[ -n "$repo_status" ]]; then
+            printf "\033[1;33m%-50s\033[0m %s\n" "$repo" "$repo_status"
+        fi
+    done
+}
+alias cgr='check_git_repos'
+
 # nanobrew
 export PATH="/opt/nanobrew/prefix/bin:$PATH"
 
