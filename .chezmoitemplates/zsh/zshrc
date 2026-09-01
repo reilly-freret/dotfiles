@@ -110,3 +110,6 @@ eval "$(starship init zsh)"
 export PATH="$HOME/.local/bin:$PATH"
 
 eval $(thefuck --alias)
+
+eval "$(atuin init zsh)"
+
