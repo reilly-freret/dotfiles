@@ -9,8 +9,23 @@ set -euo pipefail
 # resolved from profiles.ini at apply time instead.
 #
 # Re-runs when the checksums below change:
-#   user.js:       {{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "user.js") | sha256sum }}
+#   user.js:        {{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "user.js") | sha256sum }}
 #   userChrome.css: {{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "userChrome.css") | sha256sum }}
+#
+# ...and when the machine state below changes. This part is load-bearing.
+# Every guard in this script exits 0 when there is nothing to link into, and
+# chezmoi records a no-op run as a successful one. So on a machine where the
+# first `chezmoi apply` happens BEFORE Firefox is installed, the script skips,
+# gets marked done, and -- since the checksums above never change -- is never
+# retried. The config silently never lands. Including the machine state here
+# is what makes "clone -> apply -> install Firefox -> apply" work.
+#
+# Expect one extra no-op run after a successful link: the glob lines flip from
+# empty to populated, which re-triggers the script once. It is idempotent.
+#   firefox:        {{ if stat "/Applications/Firefox.app/Contents/MacOS/firefox" }}present{{ else }}absent{{ end }}
+#   profiles.ini:   {{ if stat (joinPath .chezmoi.homeDir "Library/Application Support/Firefox/profiles.ini") }}present{{ else }}absent{{ end }}
+#   linked user.js: {{ glob (joinPath .chezmoi.homeDir "Library/Application Support/Firefox/Profiles/*/user.js") | join "," }}
+#   linked chrome:  {{ glob (joinPath .chezmoi.homeDir "Library/Application Support/Firefox/Profiles/*/chrome/userChrome.css") | join "," }}
 
 source_dir={{ .chezmoi.sourceDir | quote }}
 ff_dir="$HOME/Library/Application Support/Firefox"

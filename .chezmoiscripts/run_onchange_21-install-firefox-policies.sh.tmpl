@@ -22,7 +22,20 @@ set -euo pipefail
 # is fragile, and the file is small enough that copying costs nothing.
 #
 # Re-runs when the policy file changes:
-#   policies.json: {{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "policies.json") | sha256sum }}
+#   policies.json:  {{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "policies.json") | sha256sum }}
+#
+# ...and when the machine state below changes. Both no-op exits further down
+# (Firefox absent, bundle not writable) return 0, and chezmoi records a no-op
+# run as done -- so without these lines a first apply that ran before Firefox
+# was installed would never be retried, and the policy would silently never
+# land. This is also what makes the "re-run chezmoi apply after a Firefox
+# update" note above actually do something: the update deletes the installed
+# copy, `installed` flips back to absent, and the script re-triggers.
+#
+# Expect one extra no-op run right after a successful install, when `installed`
+# flips to present. It exits early via the cmp check below.
+#   firefox:        {{ if stat "/Applications/Firefox.app/Contents/MacOS/firefox" }}present{{ else }}absent{{ end }}
+#   installed:      {{ if stat "/Applications/Firefox.app/Contents/Resources/distribution/policies.json" }}present{{ else }}absent{{ end }}
 
 source_file={{ (joinPath .chezmoi.sourceDir ".chezmoitemplates" "firefox" "policies.json") | quote }}
 app="/Applications/Firefox.app"

@@ -145,6 +145,15 @@ bundle, and install the Tridactyl native messenger.
 Then launch Firefox once. Extensions install on that first launch, not at
 apply time, so `about:addons` will be empty until then.
 
+Then run `:source` once, on the launch *after* the one that installed
+Tridactyl. Tridactyl auto-sources `~/.tridactylrc` on every start via a
+built-in default autocmd (`autocmds.TriStart = {".*": "source_quiet"}`), but
+that does not take on the run where Tridactyl is itself being force-installed
+-- and `source_quiet` swallows the failure silently, so nothing tells you. The
+symptom is that `o <alias>` falls through to a web search and no `searchurls`
+complete, exactly as if native were missing. Settings persist in extension
+storage once sourced, so this is once per profile, not once per launch.
+
 Two things are inherently manual, being per-profile UI state rather than
 config files:
 
