@@ -1,38 +1,53 @@
+# ===== generic/no category =====
+brew "gh"
+brew "typst"
+
+# ===== observability =====
+brew "htop"
+
+# ===== tool managers =====
+brew "mise"
+
+# ===== shell helpers =====
 brew "atuin"
-brew "autoconf"
-brew "automake"
-brew "bitwarden-cli"
-brew "ccache"
-brew "choose-gui"
-brew "clang-format"
-brew "cliclick"
-brew "cmake"
-brew "cowsay"
-brew "dfu-util"
+brew "starship"
+brew "thefuck"
+
+# ===== parsers =====
+brew "yq"
+brew "jq"
+
+# ===== containers =====
 brew "colima"
 brew "docker"
 brew "docker-buildx"
 brew "docker-credential-helper"
-brew "figlet"
-brew "gh"
-brew "htop"
-brew "jq"
-brew "libmagic"
-brew "libtool"
-brew "mise"
-brew "ncdu"
-brew "python@3.12"
+
+# ===== text tools =====
 brew "ripgrep"
-brew "tree"
-brew "yq"
 brew "neovim"
 brew "tree-sitter-cli"
-brew "starship"
-brew "thefuck"
 brew "leaf-markdown-viewer"
-brew "mole"
 brew "bat"
-brew "typst"
+
+# ===== dir tools =====
+brew "tree"
+brew "zoxide"
+brew "fzf"
+
+# ===== disk utils =====
+brew "ncdu"
+brew "mole"
+
+# ===== novelty ======
+brew "cowsay"
+brew "figlet"
+
+# ===== fonts =====
+cask "font-fira-code-nerd-font"
+cask "font-hack-nerd-font"
+
+# ===== posterity =====
 # cask "1password"
 # cask "bitwarden"
 # cask "bruno"

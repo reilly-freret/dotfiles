@@ -13,7 +13,6 @@ alias pi='kitty +kitten ssh freret@192.168.8.235'
 alias pir='kitty +kitten ssh freret@100.109.17.69'
 alias router='ssh root@192.168.8.1'
 alias c='cursor'
-alias z='zed'
 alias gfp='git fetch -p'
 alias gw='git worktree'
 alias gitrb='git removed-branches'
@@ -112,4 +111,6 @@ export PATH="$HOME/.local/bin:$PATH"
 eval $(thefuck --alias)
 
 eval "$(atuin init zsh)"
+
+eval "$(zoxide init zsh)"
 
