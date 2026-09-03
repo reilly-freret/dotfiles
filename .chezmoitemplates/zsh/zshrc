@@ -114,3 +114,6 @@ eval "$(atuin init zsh)"
 
 eval "$(zoxide init zsh)"
 
+# ccache symlinks
+export PATH="/opt/nanobrew/prefix/opt/ccache/libexec:$PATH"
+
