@@ -2,6 +2,12 @@
 brew "gh"
 brew "typst"
 
+# ===== esp-idf deps =====
+brew "cmake"
+brew "ccache"
+brew "ninja"
+brew "dfu-util"
+
 # ===== observability =====
 brew "htop"
 
