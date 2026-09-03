@@ -1,0 +1,16 @@
+[mgr]
+show_hidden = true
+
+[opener]
+# Define your preferred editor here (e.g., Neovim)
+edit = [
+    { run = 'nvim %s', block = true, desc = "Neovim" }
+]
+
+[open]
+prepend_rules = [
+    # Force text files and JSON files to use your custom 'edit' rule
+    { mime = "text/*", use = "edit" },
+    { url = "*.json", use = "edit" }
+]
+

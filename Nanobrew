@@ -2,7 +2,17 @@
 brew "gh"
 brew "typst"
 
+# ===== yazi deps =====
+brew "yazi"
+brew "ffmpeg-full"
+brew "sevenzip"
+brew "poppler"
+brew "fd"
+brew "resvg"
+brew "imagemagick-full"
+
 # ===== esp-idf deps =====
+# git clone --depth 1 --shallow-submodules -b v5.4 --recursive https://github.com/espressif/esp-idf.git
 brew "cmake"
 brew "ccache"
 brew "ninja"
