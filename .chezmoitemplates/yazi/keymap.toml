@@ -1,0 +1,5 @@
+[mgr]
+prepend_keymap = [
+  { on = [ "g", "f" ], run = "shell 'open -R \"%h\"' --orphan", desc = "Reveal in Finder", for = "macos" }
+]
+

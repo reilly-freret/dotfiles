@@ -1,5 +1,9 @@
 [mgr]
 show_hidden = true
+prepend_keymap = [
+  { on = [ "g", "F" ], run = "shell 'open -R \"$@\"' --confirm", desc = "Reveal in Finder", for = "macos" }
+]
+
 
 [opener]
 # Define your preferred editor here (e.g., Neovim)
