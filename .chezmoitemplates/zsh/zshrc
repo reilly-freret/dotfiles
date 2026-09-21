@@ -28,6 +28,8 @@ alias ncduc='ncdu --color dark'
 alias cz='chezmoi'
 alias nv='nvim'
 alias fk='fuck'
+alias rgi='rg -i'
+
 
 bindkey '^u' backward-kill-line
 bindkey '^k' kill-line
