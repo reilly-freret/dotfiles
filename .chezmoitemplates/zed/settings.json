@@ -40,7 +40,7 @@
 
   // custom
   "format_on_save": "off",
-  "tab_size": 2,
+  "tab_size": 4,
   "hard_tabs": false,
   "soft_wrap": "editor_width",
   "preferred_line_length": 80,
