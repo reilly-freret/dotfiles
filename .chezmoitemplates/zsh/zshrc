@@ -29,6 +29,7 @@ alias cz='chezmoi'
 alias nv='nvim'
 alias fk='fuck'
 alias rgi='rg -i'
+alias wttr='curl wttr.in'
 
 
 bindkey '^u' backward-kill-line
