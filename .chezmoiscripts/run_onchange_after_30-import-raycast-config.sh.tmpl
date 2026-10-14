@@ -1,0 +1,32 @@
+{{ if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+set -euo pipefail
+
+# Opens Raycast's "Import Settings & Data" command for raycast_configs/default.config.
+#
+# Raycast has no unattended import: the deeplink below only opens the import
+# command, and you still have to pick the file and enter the export password.
+# To keep that bearable, the config's path goes on the clipboard first.
+#
+# Re-runs when the export changes:
+#   default.config: {{ include (joinPath .chezmoi.sourceDir "raycast_configs" "default.config") | sha256sum }}
+#
+# ...and when Raycast gets installed. Same reason as in the Firefox link script:
+# if the first apply runs before Raycast is installed, the guard below exits 0,
+# chezmoi records that as done, and without this line it would never retry.
+#   raycast: {{ if stat "/Applications/Raycast.app" }}present{{ else }}absent{{ end }}
+
+config={{ joinPath .chezmoi.sourceDir "raycast_configs" "default.config" | quote }}
+
+if [[ ! -d "/Applications/Raycast.app" ]]; then
+  echo "Skipping Raycast import: /Applications/Raycast.app not found."
+  exit 0
+fi
+
+printf '%s' "$config" | pbcopy
+open "raycast://extensions/raycast/raycast/import-settings-data"
+
+echo "Raycast import opened. In the file picker, press ⌘⇧G and paste (path is on the clipboard):"
+echo "  $config"
+echo "Export password: 12345678"
+{{ end -}}

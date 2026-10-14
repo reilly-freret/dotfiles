@@ -5,3 +5,4 @@ README.md
 Brewfile
 *.rayconfig
 
+raycast_configs/
