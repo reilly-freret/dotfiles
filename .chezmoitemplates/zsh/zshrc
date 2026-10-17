@@ -11,6 +11,8 @@ alias tree="tree -L 2 -a"
 
 alias pi='kitty +kitten ssh freret@192.168.8.235'
 alias pir='kitty +kitten ssh freret@100.109.17.69'
+alias bur-local='kitty +kitten ssh reillyfreret@192.168.8.158'
+alias bur='kitty +kitten ssh reillyfreret@burrow.kite-lydian.ts.net'
 alias router='ssh root@192.168.8.1'
 alias c='cursor'
 alias gfp='git fetch -p'
