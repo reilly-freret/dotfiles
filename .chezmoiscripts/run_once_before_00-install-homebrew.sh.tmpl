@@ -1,3 +1,4 @@
+{{ if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 set -euo pipefail
 
@@ -11,4 +12,4 @@ set -euo pipefail
 
 # nanobrew
 curl -fsSL https://nanobrew.trilok.ai/install | bash
-echo "NanoBrew installation complete."
+echo "NanoBrew installation complete."{{ end -}}

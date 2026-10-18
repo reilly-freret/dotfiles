@@ -1,0 +1,32 @@
+# zshrc for Linux servers (currently just burrow). The macOS profile lives in
+# ./zshrc; symlink_dot_zshrc.tmpl picks one by OS. Keep this one lean: no GUI
+# tools, no mise/nanobrew, nothing that only exists on the laptop.
+
+export DEFAULT_USER="reillyfreret"
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="agnoster"
+plugins=(git docker docker-compose sudo)
+source $ZSH/oh-my-zsh.sh
+
+# chezmoi lives in ~/.local/bin, atuin in ~/.atuin/bin (see .chezmoiscripts).
+export PATH="$HOME/.local/bin:$HOME/.atuin/bin:$PATH"
+
+alias gs='git status'
+alias gcm='git commit --verbose -m'
+alias gl='git pull'
+alias rgi='rg -i'
+alias cz='chezmoi'
+alias dc='docker compose'
+alias dcps='docker compose ps --format "table {{.Name}}\t{{.Status}}"'
+
+bindkey '^u' backward-kill-line
+bindkey '^k' kill-line
+
+# atuin: the sync server runs on burrow itself, so sync over loopback there
+# instead of out through Caddy, public DNS and the router's port forward.
+if command -v atuin >/dev/null 2>&1; then
+  [[ "$HOST" == burrow ]] && export ATUIN_SYNC_ADDRESS="http://127.0.0.1:8093"
+  eval "$(atuin init zsh)"
+fi
+
+[[ -o interactive ]] && command -v fastfetch >/dev/null 2>&1 && fastfetch

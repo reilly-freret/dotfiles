@@ -1,3 +1,4 @@
+{{ if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 set -euo pipefail
 
@@ -10,3 +11,4 @@ if mise x just -- just --version >/dev/null 2>&1; then
 else
   echo "Skipping just completion generation: just is not available through mise yet."
 fi
+{{ end -}}

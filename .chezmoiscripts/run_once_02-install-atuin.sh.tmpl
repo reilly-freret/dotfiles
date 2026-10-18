@@ -1,0 +1,20 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+set -euo pipefail
+
+# atuin from upstream releases, into ~/.atuin/bin. Debian's package trails the
+# self-hosted sync server by many releases. --no-modify-path: the installer
+# would otherwise append to ~/.zshrc, which is a symlink into this repo;
+# zshrc-linux puts ~/.atuin/bin on PATH itself. Upgrade later with
+# `atuin update`.
+if [[ -x "$HOME/.atuin/bin/atuin" ]]; then
+  echo "atuin already installed: $("$HOME/.atuin/bin/atuin" --version)"
+  exit 0
+fi
+
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh \
+  | sh -s -- --no-modify-path
+
+echo "atuin installed. Log in once with: atuin login -u <user>  (key: \`atuin key\` on another device)"
+{{ end -}}

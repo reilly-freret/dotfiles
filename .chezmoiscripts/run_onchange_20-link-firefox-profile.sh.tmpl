@@ -1,3 +1,4 @@
+{{ if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 set -euo pipefail
 
@@ -88,3 +89,4 @@ ln -sfn "$source_dir/.chezmoitemplates/firefox/user.js" "$profile/user.js"
 ln -sfn "$source_dir/.chezmoitemplates/firefox/userChrome.css" "$profile/chrome/userChrome.css"
 
 echo "Linked Firefox config into $profile_rel"
+{{ end -}}

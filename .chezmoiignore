@@ -6,3 +6,17 @@ Brewfile
 *.rayconfig
 
 raycast_configs/
+
+{{ if ne .chezmoi.os "darwin" -}}
+# macOS-only targets. Linux servers get zsh (zshrc-linux), atuin and vim only.
+.zshenv
+.zprofile
+.tridactylrc
+Library
+Nanobrew
+.config/kitty
+.config/nvim
+.config/starship.toml
+.config/yazi
+.config/zed
+{{ end -}}

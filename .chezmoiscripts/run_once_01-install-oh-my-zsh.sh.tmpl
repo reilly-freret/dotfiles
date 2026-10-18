@@ -1,0 +1,16 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+set -euo pipefail
+
+# Oh My Zsh + zsh as the login shell on Linux. KEEP_ZSHRC: ~/.zshrc is managed
+# by chezmoi, so the installer must not replace it with its template.
+if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+  RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \
+    "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+fi
+
+zsh_path="$(command -v zsh)"
+if [[ "$(getent passwd "$USER" | cut -d: -f7)" != "$zsh_path" ]]; then
+  sudo chsh -s "$zsh_path" "$USER"
+fi
+{{ end -}}

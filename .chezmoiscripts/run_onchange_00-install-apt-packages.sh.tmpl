@@ -1,0 +1,18 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/bash
+set -euo pipefail
+
+# Linux counterpart of the Nanobrew bundle: the CLI tools the Linux zsh profile
+# (.chezmoitemplates/zsh/zshrc-linux) expects. Re-runs when this list changes.
+# atuin is not here: Debian's package lags the sync server's version, so it's
+# installed from upstream releases by run_once_02.
+packages=(zsh git curl ripgrep fastfetch)
+
+if ! command -v apt-get >/dev/null 2>&1; then
+  echo "Skipping apt packages: apt-get not available." >&2
+  exit 0
+fi
+
+sudo apt-get update -qq
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${packages[@]}"
+{{ end -}}

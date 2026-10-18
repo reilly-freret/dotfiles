@@ -1,6 +1,7 @@
 # Dotfiles
 
-Managed with [chezmoi](https://github.com/twpayne/chezmoi), currently for macOS.
+Managed with [chezmoi](https://github.com/twpayne/chezmoi) for macOS (the laptop)
+and Linux servers (burrow). See "Linux servers" below for what differs.
 
 ## Bootstrap
 
@@ -35,6 +36,28 @@ Current shell stack:
 - `mise` is activated with `eval "$(mise activate zsh)"`.
 - `starship` is initialized at the end of `zshrc`.
 - `~/.zshenv` sources Rust cargo env (`$HOME/.cargo/env`).
+
+## Linux servers
+
+Same bootstrap command. On Linux, chezmoi applies a much smaller set:
+
+- `~/.zshrc` -> `.chezmoitemplates/zsh/zshrc-linux` instead of `zsh/zshrc`
+  (`symlink_dot_zshrc.tmpl` switches on `.chezmoi.os`). OMZ with agnoster, no
+  starship/mise/nanobrew, server-relevant aliases only.
+- `~/.config/atuin/config.toml` and `~/.vimrc` as on macOS. Everything else
+  (kitty, zed, yazi, nvim, starship, Firefox/Tridactyl, Raycast, `Library/`,
+  `.zshenv`/`.zprofile`) is excluded by the `ne .chezmoi.os "darwin"` block in
+  `.chezmoiignore`.
+- macOS scripts are wrapped in `{{ if eq .chezmoi.os "darwin" }}` and render
+  empty on Linux, which chezmoi skips. Linux-only scripts:
+  - `run_onchange_00-install-apt-packages.sh.tmpl`: zsh, git, curl, ripgrep, fastfetch.
+  - `run_once_01-install-oh-my-zsh.sh.tmpl`: OMZ (keeping the managed `~/.zshrc`)
+    and zsh as login shell.
+  - `run_once_02-install-atuin.sh.tmpl`: atuin from upstream releases into
+    `~/.atuin/bin` (Debian's package lags the sync server).
+- atuin login is per machine and not versioned: `atuin login -u <user>`, with
+  the key from `atuin key` on an existing device. On burrow, which hosts the sync
+  server, zshrc-linux overrides `ATUIN_SYNC_ADDRESS` to loopback.
 
 ## Generated completions (mise-managed tools)
 
