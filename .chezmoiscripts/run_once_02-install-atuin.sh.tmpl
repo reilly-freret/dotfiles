@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # atuin from upstream releases, into ~/.atuin/bin. Debian's package trails the
-# self-hosted sync server by many releases. --no-modify-path: the installer
+# self-hosted sync server by many releases. ATUIN_NO_MODIFY_PATH: the installer
 # would otherwise append to ~/.zshrc, which is a symlink into this repo;
 # zshrc-linux puts ~/.atuin/bin on PATH itself. Upgrade later with
 # `atuin update`.
@@ -14,7 +14,7 @@ fi
 
 curl --proto '=https' --tlsv1.2 -LsSf \
   https://github.com/atuinsh/atuin/releases/latest/download/atuin-installer.sh \
-  | sh -s -- --no-modify-path
+  | ATUIN_NO_MODIFY_PATH=1 sh
 
 echo "atuin installed. Log in once with: atuin login -u <user>  (key: \`atuin key\` on another device)"
 {{ end -}}
