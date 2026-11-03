@@ -10,6 +10,7 @@
   "remove_trailing_whitespace_on_save": false,
   "cli_default_open_behavior": "new_window",
   "project_panel": {
+    "hide_hidden": true,
     "dock": "left"
   },
   "outline_panel": {
