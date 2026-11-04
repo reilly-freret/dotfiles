@@ -29,7 +29,6 @@ alias ghreview='gh pr comment -b "@greptile review"'
 alias ncduc='ncdu --color dark'
 alias cz='chezmoi'
 alias nv='nvim'
-alias fk='fuck'
 alias rgi='rg -i'
 alias wttr='curl wttr.in'
 
@@ -112,8 +111,6 @@ export PATH="$HOME/bin:$PATH"
 eval "$(starship init zsh)"
 
 export PATH="$HOME/.local/bin:$PATH"
-
-eval $(thefuck --alias)
 
 eval "$(atuin init zsh)"
 
