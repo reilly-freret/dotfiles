@@ -130,7 +130,7 @@ function y() {
 
 
 # >>> railway initialize >>>
-source "$HOME/.railway/env"
+if [[ -f "$HOME/.railway/env" ]]; then source "$HOME/.railway/env"; fi
 # <<< railway initialize <<<
 
 
