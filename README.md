@@ -67,6 +67,11 @@ Completions for tools without OMZ plugins are generated into `~/.zfunc`:
   using `mise x just -- just --completions zsh`.
 - `.chezmoiscripts/run_onchange_11-generate-pnpm-completions.sh.tmpl` writes `~/.zfunc/_pnpm`
   using `mise x pnpm -- pnpm completion zsh`.
+- `.chezmoiscripts/run_onchange_12-generate-mise-completions.sh.tmpl` writes `~/.zfunc/_mise`
+  using `mise completion zsh`. `mise activate` does not set up completions on its own.
+  The generated script calls the `usage` CLI at tab time (e.g. for `mise run <task>`),
+  so `usage` is installed from `Nanobrew` alongside `mise`. Not via `mise use -g`:
+  Nanobrew is for system-wide CLIs, and mise only for per-directory `mise.toml` tooling.
 
 Notes:
 
@@ -281,6 +286,7 @@ Current scripts:
 - `.chezmoiscripts/run_onchange_00-install-brew-items.sh.tmpl`: installs packages from `Nanobrew`.
 - `.chezmoiscripts/run_onchange_10-generate-just-completions.sh.tmpl`: generates `just` completion.
 - `.chezmoiscripts/run_onchange_11-generate-pnpm-completions.sh.tmpl`: generates `pnpm` completion.
+- `.chezmoiscripts/run_onchange_12-generate-mise-completions.sh.tmpl`: generates `mise` completion.
 - `.chezmoiscripts/run_onchange_20-link-firefox-profile.sh.tmpl`: creates a Firefox
   profile if none exists, then links `user.js` and `userChrome.css` into it.
 - `.chezmoiscripts/run_onchange_21-install-firefox-policies.sh.tmpl`: copies `policies.json`

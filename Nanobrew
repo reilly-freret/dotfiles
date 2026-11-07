@@ -23,6 +23,8 @@ brew "htop"
 
 # ===== tool managers =====
 brew "mise"
+# usage: mise's shell completions call it at tab time
+brew "usage"
 
 # ===== shell helpers =====
 brew "atuin"

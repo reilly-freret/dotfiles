@@ -1,0 +1,21 @@
+{{ if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+set -euo pipefail
+
+# mise itself and `usage` (which mise's completions shell out to) both come from
+# Nanobrew, installed by run_onchange_00 before this runs.
+
+mkdir -p "$HOME/.zfunc"
+
+if command -v mise >/dev/null 2>&1; then
+  tmp_file="$(mktemp)"
+  mise completion zsh >"$tmp_file"
+  mv "$tmp_file" "$HOME/.zfunc/_mise"
+else
+  echo "Skipping mise completion generation: mise is not installed yet."
+fi
+
+if ! command -v usage >/dev/null 2>&1; then
+  echo "Warning: usage is not on PATH; mise completions (task names etc.) won't work until it is."
+fi
+{{ end -}}
