@@ -29,7 +29,6 @@ brew "usage"
 # ===== shell helpers =====
 brew "atuin"
 brew "starship"
-brew "thefuck"
 
 # ===== parsers =====
 brew "yq"
